@@ -1,4 +1,4 @@
-### Fixed
+### Changed
 
-- Fixed Waxed Copper Chain textures on 26.1.
-- Lowered required NeoForge version.
+- Ported to 26.2.
+- Switched to YACL.

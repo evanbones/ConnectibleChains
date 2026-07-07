@@ -3,37 +3,61 @@ package com.evandev.connectiblechains.config;
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.networking.packet.ConfigSyncPayload;
 import com.evandev.connectiblechains.platform.Services;
-import me.shedaniel.autoconfig.ConfigData;
-import me.shedaniel.autoconfig.annotation.Config;
-import me.shedaniel.autoconfig.annotation.ConfigEntry;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import net.minecraft.server.level.ServerPlayer;
 
-@Config(name = CommonClass.MODID)
-public class ModConfig implements ConfigData {
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
-    @ConfigEntry.Gui.Tooltip(count = 3)
+public class ModConfig {
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final File CONFIG_FILE = Services.PLATFORM.getConfigDirectory().resolve(CommonClass.MODID + ".json").toFile();
+    private static ModConfig INSTANCE;
+
     private float chainHangAmount = 8.0F;
-    @ConfigEntry.BoundedDiscrete(max = 512)
-    @ConfigEntry.Gui.Tooltip()
     private int maxChainRange = 32;
-    @ConfigEntry.BoundedDiscrete(min = 1, max = 8)
-    @ConfigEntry.Gui.Tooltip()
     private int quality = 4;
-
-    @ConfigEntry.Gui.Tooltip()
     private boolean showToolTip = true;
-
-    @ConfigEntry.Gui.Tooltip()
     private boolean collisionsEnabled = false;
-
-    @ConfigEntry.Gui.Tooltip()
     private boolean debugDraw = Services.PLATFORM.isDevelopmentEnvironment();
+
+    public static ModConfig get() {
+        if (INSTANCE == null) {
+            load();
+        }
+        return INSTANCE;
+    }
+
+    public static void load() {
+        if (CONFIG_FILE.exists()) {
+            try (FileReader reader = new FileReader(CONFIG_FILE)) {
+                INSTANCE = GSON.fromJson(reader, ModConfig.class);
+            } catch (Exception e) {
+                CommonClass.LOGGER.error("Failed to load {}.json", CommonClass.MODID, e);
+                INSTANCE = new ModConfig();
+                save();
+            }
+        } else {
+            INSTANCE = new ModConfig();
+            save();
+        }
+    }
+
+    public static void save() {
+        try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
+            GSON.toJson(INSTANCE, writer);
+        } catch (IOException e) {
+            CommonClass.LOGGER.error("Failed to save {}.json", CommonClass.MODID, e);
+        }
+    }
 
     public float getChainHangAmount() {
         return chainHangAmount;
     }
 
-    @SuppressWarnings("unused")
     public void setChainHangAmount(float chainHangAmount) {
         this.chainHangAmount = chainHangAmount;
     }
@@ -42,7 +66,6 @@ public class ModConfig implements ConfigData {
         return maxChainRange;
     }
 
-    @SuppressWarnings("unused")
     public void setMaxChainRange(int maxChainRange) {
         this.maxChainRange = maxChainRange;
     }
@@ -51,7 +74,6 @@ public class ModConfig implements ConfigData {
         return quality;
     }
 
-    @SuppressWarnings("unused")
     public void setQuality(int quality) {
         this.quality = quality;
     }
@@ -60,12 +82,24 @@ public class ModConfig implements ConfigData {
         return debugDraw;
     }
 
+    public void setDebugDraw(boolean debugDraw) {
+        this.debugDraw = debugDraw;
+    }
+
     public boolean isCollisionsEnabled() {
         return collisionsEnabled;
     }
 
     public void setCollisionsEnabled(boolean collisionsEnabled) {
         this.collisionsEnabled = collisionsEnabled;
+    }
+
+    public boolean doShowToolTip() {
+        return showToolTip;
+    }
+
+    public void setShowToolTip(boolean showToolTip) {
+        this.showToolTip = showToolTip;
     }
 
     public void syncToClient(ServerPlayer player) {
@@ -80,9 +114,5 @@ public class ModConfig implements ConfigData {
         this.collisionsEnabled = config.collisionsEnabled;
         this.debugDraw = config.debugDraw;
         return this;
-    }
-
-    public boolean doShowToolTip() {
-        return showToolTip;
     }
 }

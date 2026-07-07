@@ -7,12 +7,9 @@ import com.evandev.connectiblechains.client.render.entity.catenary.PlusCatenaryR
 import com.evandev.connectiblechains.client.render.entity.catenary.SquareCatenaryRenderer;
 import com.evandev.connectiblechains.client.render.entity.model.ChainKnotEntityModel;
 import com.evandev.connectiblechains.client.render.entity.texture.ChainTextureManager;
-import com.evandev.connectiblechains.config.ModConfig;
 import com.evandev.connectiblechains.util.MathHelper;
-import me.shedaniel.autoconfig.AutoConfig;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.world.InteractionResult;
 
 import java.util.Optional;
 
@@ -34,12 +31,6 @@ public class ClientInitializer {
     public void onInitializeClient() {
         instance = this;
         registerCatenaryRenders();
-        AutoConfig.getConfigHolder(ModConfig.class).registerSaveListener((holder, config) -> {
-            if (this.chainKnotEntityRenderer != null) {
-                this.chainKnotEntityRenderer.getChainRenderer().purge();
-            }
-            return InteractionResult.PASS;
-        });
     }
 
     private void registerCatenaryRenders() {

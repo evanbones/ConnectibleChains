@@ -14,16 +14,13 @@ configurations {
 
 dependencies {
     compileOnly(project(':common')) {
-        capabilities {
-            requireCapability "$group:$mod_id"
-        }
         def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
         attributes {
             attribute(loaderAttribute, 'common')
         }
     }
-    commonJava project(path: ':common', configuration: 'commonJava')
-    commonResources project(path: ':common', configuration: 'commonResources')
+    commonJava(project(path: ':common', configuration: 'commonJava'))
+    commonResources(project(path: ':common', configuration: 'commonResources'))
 }
 
 tasks.named('compileJava', JavaCompile) {
@@ -53,20 +50,18 @@ publishMods {
     curseforge {
         accessToken = providers.environmentVariable("CURSEFORGE_TOKEN")
         projectId = "1451848"
-        minecraftVersions.add("26.1")
-        minecraftVersions.add("26.1.1")
-        minecraftVersions.add("26.1.2")
+        minecraftVersions.add(project.minecraft_version)
 
-        requires { slug = "cloth-config" }
+        optional("rrv")
+        requires("yacl")
     }
 
     modrinth {
         accessToken = providers.environmentVariable("MODRINTH_TOKEN")
         projectId = "5pzBXDS3"
-        minecraftVersions.add("26.1")
-        minecraftVersions.add("26.1.1")
-        minecraftVersions.add("26.1.2")
+        minecraftVersions.add(project.minecraft_version)
 
-        requires { slug = "cloth-config" }
+        optional("rrv")
+        requires("yacl")
     }
 }
