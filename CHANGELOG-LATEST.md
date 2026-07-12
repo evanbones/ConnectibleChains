@@ -1,3 +1,3 @@
 ### Fixed
 
-- Added additional checks to discard stale chain collision entities.
+- Fixed shift-click chain behaviour.

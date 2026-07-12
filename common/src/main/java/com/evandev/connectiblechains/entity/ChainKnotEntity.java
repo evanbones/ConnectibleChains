@@ -57,7 +57,7 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         super(ModEntityTypes.CHAIN_KNOT.get(), level, pos);
         this.sourceItem = sourceItem;
         this.attachedFace = face != null ? face : Direction.UP;
-        setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+        this.recalculateBoundingBox();
     }
 
     @Nullable
@@ -111,6 +111,12 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         ChainTracker.register(this.level(), this);
 
         if (this.level() instanceof ServerLevel serverWorld) {
+            if (!this.isRemoved() && !this.survives()) {
+                this.dropItem(null);
+                this.discard();
+                return;
+            }
+
             Chainable.tickChain(serverWorld, this);
         }
     }

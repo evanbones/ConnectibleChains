@@ -53,7 +53,7 @@ public class ChainItemCallbacks {
             Direction knotDir = determineKnotDirection(blockState, hitResult.getDirection());
 
             if (stack.is(ModTagRegistry.CATENARY_ITEMS)) {
-                if (player.isShiftKeyDown() && existingKnot == null) {
+                if (player.isShiftKeyDown()) {
                     return InteractionResult.PASS;
                 }
 
@@ -64,8 +64,13 @@ public class ChainItemCallbacks {
                 if (level instanceof ServerLevel serverWorld) {
                     ChainKnotEntity knot = existingKnot != null ? existingKnot : ChainKnotEntity.getOrCreate(serverWorld, blockPos, stack.getItem(), knotDir);
                     return knot.interact(player, hand);
+                } else {
+                    if (existingKnot != null) {
+                        return existingKnot.interact(player, hand);
+                    }
+
+                    return InteractionResult.SUCCESS;
                 }
-                return InteractionResult.SUCCESS;
             }
 
             List<Chainable> draggedChains = collectChainablesAround(level, blockPos, entity -> entity.getChainData(player) != null);
@@ -81,6 +86,7 @@ public class ChainItemCallbacks {
                 if (level instanceof ServerLevel serverWorld) {
                     return attachHeldChainsToBlock(player, serverWorld, blockPos, knotDir);
                 }
+
                 return InteractionResult.SUCCESS;
             }
         }
