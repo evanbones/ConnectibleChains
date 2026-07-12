@@ -52,7 +52,7 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         super(ModEntityTypes.CHAIN_KNOT.get(), level, pos);
         this.sourceItem = sourceItem;
         this.attachedFace = face != null ? face : Direction.UP;
-        setPos(pos.getX(), pos.getY(), pos.getZ());
+        this.recalculateBoundingBox();
     }
 
     @Nullable
