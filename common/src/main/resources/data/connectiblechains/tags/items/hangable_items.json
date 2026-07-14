@@ -82,6 +82,10 @@
     {
       "id": "chipped:tall_soul_lantern",
       "required": false
+    },
+    {
+      "id": "#minecraft:lanterns",
+      "required": false
     }
   ]
 }

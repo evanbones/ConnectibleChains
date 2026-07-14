@@ -12,6 +12,7 @@ import static com.evandev.connectiblechains.util.MathHelper.drip2prime;
 public class SquareCatenaryRenderer extends CatenaryRenderer {
     public static final float SQRT_2 = (float) Math.sqrt(2);
     protected static final float CHAIN_SCALE = 1F;
+    private static final float KNOT_INSET = 0.0625F;
 
     public SquareCatenaryRenderer(UVRect a, UVRect b) {
         super(a, b);
@@ -43,18 +44,24 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
         normalA.normalize(chainHalfWidthA * SQRT_2);
         normalB.normalize(chainHalfWidthB * SQRT_2);
 
-        Vector3f vert00A = new Vector3f(-normalA.x(), 0, -normalA.z());
-        Vector3f vert01A = new Vector3f(normalA.x(), 0, normalA.z());
-        Vector3f vert10A = new Vector3f(-normalA.x(), endPosition.y(), -normalA.z());
-        Vector3f vert11A = new Vector3f(normalA.x(), endPosition.y(), normalA.z());
+        float length = Math.abs(endPosition.y());
+        float inset = Math.min(KNOT_INSET, length * 0.25F);
+        float sign = Math.signum(endPosition.y());
+        float yStart = sign * inset;
+        float yEnd = endPosition.y() - sign * inset;
 
-        Vector3f vert00B = new Vector3f(-normalB.x(), 0, -normalB.z());
-        Vector3f vert01B = new Vector3f(normalB.x(), 0, normalB.z());
-        Vector3f vert10B = new Vector3f(-normalB.x(), endPosition.y(), -normalB.z());
-        Vector3f vert11B = new Vector3f(normalB.x(), endPosition.y(), normalB.z());
+        Vector3f vert00A = new Vector3f(-normalA.x(), yStart, -normalA.z());
+        Vector3f vert01A = new Vector3f(normalA.x(), yStart, normalA.z());
+        Vector3f vert10A = new Vector3f(-normalA.x(), yEnd, -normalA.z());
+        Vector3f vert11A = new Vector3f(normalA.x(), yEnd, normalA.z());
 
-        float f0 = 0F, f1 = 1F;
-        float uvv0 = 0F, uvv1 = Math.abs(endPosition.y()) / CHAIN_SCALE;
+        Vector3f vert00B = new Vector3f(-normalB.x(), yStart, -normalB.z());
+        Vector3f vert01B = new Vector3f(normalB.x(), yStart, normalB.z());
+        Vector3f vert10B = new Vector3f(-normalB.x(), yEnd, -normalB.z());
+        Vector3f vert11B = new Vector3f(normalB.x(), yEnd, normalB.z());
+
+        float f0 = inset / Math.max(length, 1e-4F), f1 = 1F - f0;
+        float uvv0 = 0F, uvv1 = Math.abs(yEnd - yStart) / CHAIN_SCALE;
         build4Sides(builder, f0, f1, uvv0, uvv1, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
     }
 
@@ -76,16 +83,19 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
         Vector3f vert10B = new Vector3f();
         Quaternionf rotatorA = new Quaternionf();
         Quaternionf rotatorB = new Quaternionf();
-        Vector3f segmentStart = new Vector3f(), segmentEnd = new Vector3f();
+        float inset = Math.min(KNOT_INSET, distanceXZ * 0.25F);
+        float xLimit = distanceXZ - inset;
+        float x = inset;
+        Vector3f segmentStart = new Vector3f(x, (float) drip2(x * wrongDistanceFactor, distance, endPosition.y(), slack), 0);
+        Vector3f segmentEnd = new Vector3f();
 
         float uvv1 = 0;
         float uvv0;
-        float x = 0;
-        float f0, f1 = 0;
+        float f0, f1 = x / distanceXZ;
         for (int segment = 0; segment < MAX_SEGMENTS; segment++) {
             float gradient = (float) drip2prime(x * wrongDistanceFactor, distance, endPosition.y(), slack);
             x += estimateDeltaX(desiredSegmentLength, gradient);
-            x = Math.min(distanceXZ, x);
+            x = Math.min(xLimit, x);
 
             f0 = f1;
             f1 = x / distanceXZ;
@@ -128,7 +138,7 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
 
             build4Sides(builder, f0, f1, uvv0, uvv1, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
 
-            if (x >= distanceXZ) {
+            if (x >= xLimit) {
                 break;
             }
             segmentStart.set(segmentEnd);

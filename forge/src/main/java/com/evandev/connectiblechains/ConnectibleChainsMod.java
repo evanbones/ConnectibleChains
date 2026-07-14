@@ -61,11 +61,13 @@ public class ConnectibleChainsMod {
                 event.getEntity().swing(event.getHand());
                 event.setCanceled(true);
                 event.setCancellationResult(InteractionResult.SUCCESS);
+                return;
             }
-            return;
         }
+
         InteractionResult result = ChainItemCallbacks.chainUseEvent(event.getEntity(), event.getLevel(), event.getHand(), event.getHitVec());
-        if (result.consumesAction()) {
+
+        if (result.consumesAction() || result == InteractionResult.FAIL) {
             event.setCanceled(true);
             event.setCancellationResult(result);
         }

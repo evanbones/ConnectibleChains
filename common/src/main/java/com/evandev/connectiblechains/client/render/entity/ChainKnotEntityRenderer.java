@@ -170,7 +170,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
             float kg = ((knotTint >> 8) & 0xFF) / 255.0f;
             float kb = (knotTint & 0xFF) / 255.0f;
             float ka = ((knotTint >> 24) & 0xFF) / 255.0f;
-            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(getKnotTexture(state.sourceItem)));
+            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderType.entityCutout(getKnotTexture(state.sourceItem)));
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, kr, kg, kb, ka);
             matrices.popPose();
         }
