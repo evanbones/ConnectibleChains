@@ -164,7 +164,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
 
             matrices.scale(scaleXZ, 1, scaleXZ);
 
-            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(this.model.renderType(getKnotTexture(state.sourceItem)));
+            VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderType.entityCutout(getKnotTexture(state.sourceItem)));
             this.model.renderToBuffer(matrices, vertexConsumer, light, OverlayTexture.NO_OVERLAY, state.knotTintColor);
             matrices.popPose();
         }
