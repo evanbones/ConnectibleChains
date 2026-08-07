@@ -2,13 +2,10 @@
   "replace": false,
   "values": [
     "#connectiblechains:ropes",
+    "#c:chains",
     {
       "required": false,
       "id": "#minecraft:chains"
-    },
-    {
-      "required": false,
-      "id": "#c:chains"
     }
   ]
 }
