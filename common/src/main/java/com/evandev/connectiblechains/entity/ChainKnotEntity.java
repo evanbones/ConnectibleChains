@@ -225,6 +225,7 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         if (nbt.contains("AttachedFace")) {
             this.attachedFace = Direction.from3DDataValue(nbt.getInt("AttachedFace"));
         }
+        this.recalculateBoundingBox();
     }
 
     @Override
@@ -266,6 +267,8 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
 
     @Override
     protected @NotNull AABB calculateBoundingBox(@NotNull BlockPos pos, @NotNull Direction direction) {
+        Direction face = this.attachedFace != null ? this.attachedFace : Direction.UP;
+
         double x = pos.getX() + 0.5D;
         double y = pos.getY() + 0.5D;
         double z = pos.getZ() + 0.5D;
@@ -273,9 +276,17 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         double width = this.getType().getWidth() / 2.0;
         double height = this.getType().getHeight();
 
+        double tipX = x + face.getStepX() * height;
+        double tipY = y + face.getStepY() * height;
+        double tipZ = z + face.getStepZ() * height;
+
+        double spreadX = face.getAxis() == Direction.Axis.X ? 0.0 : width;
+        double spreadY = face.getAxis() == Direction.Axis.Y ? 0.0 : width;
+        double spreadZ = face.getAxis() == Direction.Axis.Z ? 0.0 : width;
+
         return new AABB(
-                x - width, y, z - width,
-                x + width, y + height, z + width
+                Math.min(x, tipX) - spreadX, Math.min(y, tipY) - spreadY, Math.min(z, tipZ) - spreadZ,
+                Math.max(x, tipX) + spreadX, Math.max(y, tipY) + spreadY, Math.max(z, tipZ) + spreadZ
         );
     }
 
@@ -340,6 +351,7 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         int data = packet.getData();
         this.sourceItem = BuiltInRegistries.ITEM.byId(data & 0xFFFFFF);
         this.attachedFace = Direction.from3DDataValue((data >> 24) & 0xFF);
+        this.recalculateBoundingBox();
     }
 
     @Override
