@@ -2,6 +2,7 @@ package com.evandev.connectiblechains.networking.packet;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.client.ClientInitializer;
+import com.evandev.connectiblechains.util.ChainCollisionIndex;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -27,6 +28,7 @@ public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
             CommonClass.runtimeConfig.setChainHangAmount(payload.chainHangAmount());
             CommonClass.runtimeConfig.setMaxChainRange(payload.maxChainRange());
             CommonClass.runtimeConfig.setCollisionsEnabled(payload.collisionsEnabled());
+            ChainCollisionIndex.clearAll();
 
             if (ClientInitializer.getInstance() != null) {
                 ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(r -> r.getChainRenderer().purge());

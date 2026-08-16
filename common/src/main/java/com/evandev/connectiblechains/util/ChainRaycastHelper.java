@@ -1,6 +1,5 @@
 package com.evandev.connectiblechains.util;
 
-import com.evandev.connectiblechains.entity.ChainCollisionEntity;
 import com.evandev.connectiblechains.entity.ChainKnotEntity;
 import com.evandev.connectiblechains.entity.Chainable;
 import com.evandev.connectiblechains.networking.packet.BannerSyncS2CPacket;
@@ -404,9 +403,6 @@ public class ChainRaycastHelper {
             HangingLightHelper.removeAllForChain(serverWorld, chainedEntity, holder, link);
             link.customSlack = 1.0f / currentSag;
             HangingLightHelper.placeAllForChain(serverWorld, chainedEntity, holder, link);
-
-            ChainCollisionEntity.destroyCollision(serverWorld, link);
-            ChainCollisionEntity.createCollision((Entity & Chainable) chainedEntity, link);
 
             if (holder != null) {
                 Services.NETWORK.sendToAllClients(serverWorld.getServer(), new ChainSlackSyncS2CPacket(chainedEntity.getId(), holder.getId(), link.customSlack));

@@ -2,13 +2,10 @@ package com.evandev.connectiblechains.entity;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.item.ChainItemCallbacks;
-import com.evandev.connectiblechains.networking.packet.BannerSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.BuntingSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainAttachS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainSlackSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.HangingSyncS2CPacket;
+import com.evandev.connectiblechains.networking.packet.*;
 import com.evandev.connectiblechains.platform.Services;
 import com.evandev.connectiblechains.tag.ModTagRegistry;
+import com.evandev.connectiblechains.util.ChainCollisionIndex;
 import com.evandev.connectiblechains.util.ChainTracker;
 import com.evandev.connectiblechains.util.MathHelper;
 import net.minecraft.core.BlockPos;
@@ -119,6 +116,19 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
 
             Chainable.tickChain(serverWorld, this);
         }
+
+        if (!this.isRemoved()) {
+            syncCollision();
+        }
+    }
+
+    private void syncCollision() {
+        for (ChainData chainData : new HashSet<>(getChainDataSet())) {
+            Entity chainHolder = getChainHolder(chainData);
+            if (chainHolder instanceof Chainable && !chainHolder.isRemoved()) {
+                ChainCollisionIndex.ensure(this.level(), this, chainHolder, chainData);
+            }
+        }
     }
 
     @Override
@@ -128,8 +138,16 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         }
 
         ChainTracker.unregister(this.level(), this);
+        ChainCollisionIndex.removeAllOwnedBy(this.level(), this);
 
         super.remove(reason);
+    }
+
+    @Override
+    public void onClientRemoval() {
+        super.onClientRemoval();
+        ChainTracker.unregister(this.level(), this);
+        ChainCollisionIndex.removeAllOwnedBy(this.level(), this);
     }
 
     @Override

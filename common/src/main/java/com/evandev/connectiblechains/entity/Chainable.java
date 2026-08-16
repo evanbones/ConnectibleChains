@@ -190,7 +190,6 @@ public interface Chainable {
                 if (sendPacket) {
                     Services.NETWORK.sendToAllClients(serverWorld.getServer(), new ChainAttachS2CPacket(entity, holder, null, chainData.sourceItem));
                 }
-                ChainCollisionEntity.destroyCollision(serverWorld, chainData);
                 HangingLightHelper.removeAllForChain(serverWorld, entity, holder, chainData);
 
                 if (holder instanceof ChainKnotEntity knot) {
@@ -237,9 +236,6 @@ public interface Chainable {
             if (!chainData.hangings.isEmpty()) {
                 Services.NETWORK.sendToAllClients(serverLevel.getServer(), new HangingSyncS2CPacket(entity.getId(), chainData.chainHolder.getId(), new ArrayList<>(chainData.hangings)));
             }
-            if (chainData.chainHolder instanceof Chainable) {
-                ChainCollisionEntity.createCollision(entity, chainData);
-            }
             HangingLightHelper.placeAllForChain(serverLevel, entity, chainData.chainHolder, chainData);
         }
     }
@@ -267,10 +263,6 @@ public interface Chainable {
                     float distanceTo = entity.distanceTo(chainHolder);
                     if (!entity.beforeChainTick(chainHolder, distanceTo)) {
                         continue;
-                    }
-
-                    if (chainHolder instanceof Chainable) {
-                        ChainCollisionEntity.createCollision(entity, chainData);
                     }
 
                     if (!chainData.hangings.isEmpty() && level.getGameTime() % 40 == 0) {
@@ -533,7 +525,6 @@ public interface Chainable {
     Vec3 getChainPos(float delta);
 
     final class ChainData {
-        public final ArrayList<Integer> collisionStorage = new ArrayList<>(16);
         @NotNull
         public final Item sourceItem;
         public final int unresolvedChainHolderId;
@@ -614,7 +605,7 @@ public interface Chainable {
 
         @Override
         public String toString() {
-            return "ChainData{" + "collisionStorage=" + collisionStorage + ", unresolvedChainData=" + unresolvedChainData + ", sourceItem=" + sourceItem + ", unresolvedChainHolderId=" + unresolvedChainHolderId + ", chainHolder=" + chainHolder + ", customSlack=" + customSlack + '}';
+            return "ChainData{" + "unresolvedChainData=" + unresolvedChainData + ", sourceItem=" + sourceItem + ", unresolvedChainHolderId=" + unresolvedChainHolderId + ", chainHolder=" + chainHolder + ", customSlack=" + customSlack + '}';
         }
 
         public record BuntingEntry(float t, DyeColor color) {

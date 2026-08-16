@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot" : "鎖の結び目",
   "message.connectiblechains.connectible_chain" : "カテナリー曲線対応 [Shift]",
   "message.connectiblechains.connectible_chain_detailed" : "フェンスまたは塀をクリックしてカテナリー曲線を作ることができます！",
-  "entity.connectiblechains.chain_collision" : "鎖の衝突判定",
   "text.autoconfig.connectiblechains.option.chainHangAmount" : "鎖の垂れ下がり",
   "text.autoconfig.connectiblechains.option.maxChainRange" : "鎖の最大距離",
   "text.autoconfig.connectiblechains.option.quality" : "鎖の品質",

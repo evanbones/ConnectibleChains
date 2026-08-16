@@ -1,7 +1,6 @@
 package com.evandev.connectiblechains.client;
 
 import com.evandev.connectiblechains.CommonClass;
-import com.evandev.connectiblechains.client.render.entity.ChainCollisionEntityRenderer;
 import com.evandev.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
 import com.evandev.connectiblechains.entity.ModEntityTypes;
 import com.evandev.connectiblechains.item.ChainItemCallbacks;
@@ -45,7 +44,6 @@ public class ConnectibleChainsModClient {
                 ClientInitializer.getInstance().setChainKnotEntityRenderer(renderer);
                 return renderer;
             });
-            event.registerEntityRenderer(ModEntityTypes.CHAIN_COLLISION.get(), ChainCollisionEntityRenderer::new);
         }
 
         @SubscribeEvent

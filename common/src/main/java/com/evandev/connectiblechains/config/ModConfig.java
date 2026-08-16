@@ -27,7 +27,7 @@ public class ModConfig implements ConfigData {
     private boolean showRangeWarningHud = true;
 
     @ConfigEntry.Gui.Tooltip()
-    private boolean collisionsEnabled = false;
+    private boolean collisionsEnabled = true;
 
     @ConfigEntry.Gui.Tooltip()
     private boolean debugDraw = Services.PLATFORM.isDevelopmentEnvironment();

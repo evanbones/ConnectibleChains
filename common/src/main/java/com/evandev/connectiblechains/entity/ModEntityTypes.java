@@ -16,15 +16,6 @@ public class ModEntityTypes {
                     .sized(0.375f, 0.5F)
                     .fireImmune());
 
-    public static final Supplier<EntityType<ChainCollisionEntity>> CHAIN_COLLISION = Services.REGISTRY.registerEntity("chain_collision",
-            () -> EntityType.Builder.<ChainCollisionEntity>of(ChainCollisionEntity::new, MobCategory.MISC)
-                    .clientTrackingRange(1)
-                    .updateInterval(Integer.MAX_VALUE)
-                    .sized(0.25f, 0.375f)
-                    .noSave()
-                    .noSummon()
-                    .fireImmune());
-
     public static void init() {
         CommonClass.LOGGER.info("Initialized entity types.");
     }
