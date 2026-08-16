@@ -21,10 +21,16 @@ public class ChainRenderer {
         }
     };
 
-    public void renderBaked(CatenaryRenderer renderer, VertexConsumer buffer, PoseStack matrices, Vector3f chainVec, float slack, int blockLight0, int blockLight1, int skyLight0, int skyLight1, int tintColor) {
-        BakeKey key = new BakeKey(chainVec, renderer, slack);
+    private final BakeKey lookupKey = new BakeKey();
 
-        ChainModel model = models.computeIfAbsent(key, k -> renderer.buildModel(chainVec, slack));
+    public void renderBaked(CatenaryRenderer renderer, VertexConsumer buffer, PoseStack matrices, Vector3f chainVec, float slack, int blockLight0, int blockLight1, int skyLight0, int skyLight1, int tintColor) {
+        lookupKey.set(chainVec, renderer, slack);
+
+        ChainModel model = models.get(lookupKey);
+        if (model == null) {
+            model = renderer.buildModel(chainVec, slack);
+            models.put(new BakeKey().set(chainVec, renderer, slack), model);
+        }
         model.render(buffer, matrices, blockLight0, blockLight1, skyLight0, skyLight1, tintColor);
     }
 
@@ -38,18 +44,26 @@ public class ChainRenderer {
     }
 
     public static class BakeKey {
-        private final Vector3f chainVec;
-        private final Class<? extends CatenaryRenderer> rendererClass;
-        private final UVRect sideA;
-        private final UVRect sideB;
-        private final float slack;
+        private final Vector3f chainVec = new Vector3f();
+        private Class<? extends CatenaryRenderer> rendererClass;
+        private UVRect sideA;
+        private UVRect sideB;
+        private float slack;
+        private int hash;
 
-        public BakeKey(Vector3f chainVec, CatenaryRenderer renderer, float slack) {
-            this.chainVec = new Vector3f(chainVec);
+        public BakeKey set(Vector3f chainVec, CatenaryRenderer renderer, float slack) {
+            this.chainVec.set(chainVec);
             this.rendererClass = renderer.getClass();
             this.sideA = renderer.getSideA();
             this.sideB = renderer.getSideB();
             this.slack = slack;
+
+            int h = chainVec.hashCode();
+            h = 31 * h + rendererClass.hashCode();
+            h = 31 * h + sideA.hashCode();
+            h = 31 * h + sideB.hashCode();
+            this.hash = 31 * h + Float.floatToIntBits(slack);
+            return this;
         }
 
         @Override
@@ -57,15 +71,15 @@ public class ChainRenderer {
             if (this == o) return true;
             if (!(o instanceof BakeKey bakeKey)) return false;
             return Float.compare(bakeKey.slack, slack) == 0 &&
-                    Objects.equals(chainVec, bakeKey.chainVec) &&
-                    Objects.equals(rendererClass, bakeKey.rendererClass) &&
+                    chainVec.equals(bakeKey.chainVec) &&
+                    rendererClass == bakeKey.rendererClass &&
                     Objects.equals(sideA, bakeKey.sideA) &&
                     Objects.equals(sideB, bakeKey.sideB);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(chainVec, rendererClass, sideA, sideB, slack);
+            return hash;
         }
     }
 }

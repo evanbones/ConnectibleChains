@@ -2,15 +2,12 @@ package com.evandev.connectiblechains.entity;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.item.ChainItemCallbacks;
-import com.evandev.connectiblechains.networking.packet.BannerSyncS2CPacket;
-import com.evandev.connectiblechains.util.HangingLightHelper;
-import com.evandev.connectiblechains.networking.packet.BuntingSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainAttachS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainSlackSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.HangingSyncS2CPacket;
+import com.evandev.connectiblechains.networking.packet.*;
 import com.evandev.connectiblechains.platform.Services;
 import com.evandev.connectiblechains.tag.ModTagRegistry;
+import com.evandev.connectiblechains.util.HangingLightHelper;
 import com.mojang.datafixers.util.Either;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -18,9 +15,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -117,6 +113,15 @@ public interface Chainable {
 
     private static <E extends HangingEntity & Chainable> void resolveChainDataSet(E entity, HashSet<ChainData> chainDataSet) {
         if (!(entity.level() instanceof ServerLevel serverWorld)) return;
+
+        boolean anyUnresolved = false;
+        for (ChainData chainData : chainDataSet) {
+            if (chainData.unresolvedChainData != null) {
+                anyUnresolved = true;
+                break;
+            }
+        }
+        if (!anyUnresolved) return;
 
         for (ChainData chainData : new HashSet<>(chainDataSet)) {
             if (chainData.unresolvedChainData != null) {
@@ -242,6 +247,8 @@ public interface Chainable {
 
     static <E extends HangingEntity & Chainable> void tickChain(ServerLevel level, E entity) {
         HashSet<ChainData> chainDataSet = entity.getChainDataSet();
+        if (chainDataSet.isEmpty()) return;
+
         resolveChainDataSet(entity, chainDataSet);
 
         for (ChainData chainData : new HashSet<>(chainDataSet)) {
@@ -504,11 +511,19 @@ public interface Chainable {
 
     @Nullable
     default ChainData getChainData(@Nullable Entity holder) {
-        if (holder != null) {
-            for (ChainData chainData : new HashSet<>(getChainDataSet())) {
-                if (getChainHolder(chainData) == holder) {
-                    return chainData;
-                }
+        if (holder == null) return null;
+
+        boolean anyUnresolved = false;
+        for (ChainData chainData : getChainDataSet()) {
+            if (chainData.getResolvedHolder() == holder) return chainData;
+            if (chainData.needsResolution()) anyUnresolved = true;
+        }
+
+        if (!anyUnresolved) return null;
+
+        for (ChainData chainData : new HashSet<>(getChainDataSet())) {
+            if (getChainHolder(chainData) == holder) {
+                return chainData;
             }
         }
         return null;
@@ -564,6 +579,15 @@ public interface Chainable {
             return customSlack < 0 ? CommonClass.runtimeConfig.getChainHangAmount() : customSlack;
         }
 
+        @Nullable
+        public Entity getResolvedHolder() {
+            return chainHolder;
+        }
+
+        public boolean needsResolution() {
+            return chainHolder == null && unresolvedChainHolderId != 0;
+        }
+
         public SoundType getSourceBlockSoundGroup() {
             return Chainable.getSourceBlockSoundGroup(sourceItem);
         }
@@ -585,7 +609,9 @@ public interface Chainable {
 
         @Override
         public int hashCode() {
-            return Objects.hash(getHolderId(), unresolvedChainData, sourceItem);
+            int hash = getHolderId();
+            hash = 31 * hash + (unresolvedChainData == null ? 0 : unresolvedChainData.hashCode());
+            return 31 * hash + System.identityHashCode(sourceItem);
         }
 
         public void kill() {

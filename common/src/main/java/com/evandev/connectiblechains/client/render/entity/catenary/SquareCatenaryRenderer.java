@@ -1,13 +1,11 @@
 package com.evandev.connectiblechains.client.render.entity.catenary;
 
 import com.evandev.connectiblechains.CommonClass;
-import com.evandev.connectiblechains.client.render.entity.model.ChainModel;
 import com.evandev.connectiblechains.client.render.entity.UVRect;
+import com.evandev.connectiblechains.client.render.entity.model.ChainModel;
+import com.evandev.connectiblechains.util.MathHelper;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-
-import static com.evandev.connectiblechains.util.MathHelper.drip2;
-import static com.evandev.connectiblechains.util.MathHelper.drip2prime;
 
 public class SquareCatenaryRenderer extends CatenaryRenderer {
     public static final float SQRT_2 = (float) Math.sqrt(2);
@@ -86,21 +84,22 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
         float inset = Math.min(KNOT_INSET, distanceXZ * 0.25F);
         float xLimit = distanceXZ - inset;
         float x = inset;
-        Vector3f segmentStart = new Vector3f(x, (float) drip2(x * wrongDistanceFactor, distance, endPosition.y(), slack), 0);
+        MathHelper.Catenary catenary = MathHelper.Catenary.of(distance, endPosition.y(), slack);
+        Vector3f segmentStart = new Vector3f(x, (float) catenary.y(x * wrongDistanceFactor), 0);
         Vector3f segmentEnd = new Vector3f();
 
         float uvv1 = 0;
         float uvv0;
         float f0, f1 = x / distanceXZ;
         for (int segment = 0; segment < MAX_SEGMENTS; segment++) {
-            float gradient = (float) drip2prime(x * wrongDistanceFactor, distance, endPosition.y(), slack);
+            float gradient = (float) catenary.slope(x * wrongDistanceFactor);
             x += estimateDeltaX(desiredSegmentLength, gradient);
             x = Math.min(xLimit, x);
 
             f0 = f1;
             f1 = x / distanceXZ;
 
-            float y = (float) drip2(x * wrongDistanceFactor, distance, endPosition.y(), slack);
+            float y = (float) catenary.y(x * wrongDistanceFactor);
             segmentEnd.set(x, y, 0);
 
             rotAxis.set(segmentEnd.x() - segmentStart.x(), segmentEnd.y() - segmentStart.y(), segmentEnd.z() - segmentStart.z());

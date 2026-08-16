@@ -4,6 +4,7 @@ import com.evandev.connectiblechains.entity.ChainKnotEntity;
 import com.evandev.connectiblechains.entity.Chainable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.Block;
@@ -12,7 +13,6 @@ import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 public class HangingLightHelper {
@@ -23,12 +23,10 @@ public class HangingLightHelper {
         if (!(dst instanceof ChainKnotEntity dstKnot)) return null;
         Vec3 srcPos = srcKnot.getChainPos(1.0f);
         Vec3 dstPos = dstKnot.getChainPos(1.0f);
-        double dist3D = srcPos.distanceTo(dstPos);
-        if (dist3D < 0.01) return null;
-        double worldX = Mth.lerp(t, srcPos.x(), dstPos.x());
-        double worldY = srcPos.y() + MathHelper.drip2(t * dist3D, dist3D, dstPos.y() - srcPos.y(), slack);
-        double worldZ = Mth.lerp(t, srcPos.z(), dstPos.z());
-        return BlockPos.containing(worldX, worldY - 1.0, worldZ);
+        if (srcPos.distanceTo(dstPos) < 0.01) return null;
+
+        Vec3 anchor = HangingBlockPlacement.anchor(srcPos, dstPos, t, slack);
+        return BlockPos.containing(anchor.x(), anchor.y() - 1.0, anchor.z());
     }
 
     public static void place(ServerLevel level, BlockPos pos, int emission) {

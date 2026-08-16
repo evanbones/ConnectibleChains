@@ -11,7 +11,8 @@ import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
 public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
-                                boolean collisionsEnabled) implements CustomPacketPayload {
+                                boolean collisionsEnabled,
+                                boolean hangingBlockCollisions) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ConfigSyncPayload> TYPE = new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(CommonClass.MODID, "config_sync"));
 
@@ -19,6 +20,7 @@ public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
             ByteBufCodecs.FLOAT, ConfigSyncPayload::chainHangAmount,
             ByteBufCodecs.INT, ConfigSyncPayload::maxChainRange,
             ByteBufCodecs.BOOL, ConfigSyncPayload::collisionsEnabled,
+            ByteBufCodecs.BOOL, ConfigSyncPayload::hangingBlockCollisions,
             ConfigSyncPayload::new
     );
 
@@ -28,6 +30,7 @@ public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
             CommonClass.runtimeConfig.setChainHangAmount(payload.chainHangAmount());
             CommonClass.runtimeConfig.setMaxChainRange(payload.maxChainRange());
             CommonClass.runtimeConfig.setCollisionsEnabled(payload.collisionsEnabled());
+            CommonClass.runtimeConfig.setHangingBlockCollisionsEnabled(payload.hangingBlockCollisions());
             ChainCollisionIndex.clearAll();
 
             if (ClientInitializer.getInstance() != null) {

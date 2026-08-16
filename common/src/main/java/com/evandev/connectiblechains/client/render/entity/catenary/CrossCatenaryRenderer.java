@@ -1,13 +1,11 @@
 package com.evandev.connectiblechains.client.render.entity.catenary;
 
 import com.evandev.connectiblechains.CommonClass;
-import com.evandev.connectiblechains.client.render.entity.model.ChainModel;
 import com.evandev.connectiblechains.client.render.entity.UVRect;
+import com.evandev.connectiblechains.client.render.entity.model.ChainModel;
+import com.evandev.connectiblechains.util.MathHelper;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-
-import static com.evandev.connectiblechains.util.MathHelper.drip2;
-import static com.evandev.connectiblechains.util.MathHelper.drip2prime;
 
 public class CrossCatenaryRenderer extends CatenaryRenderer {
 
@@ -66,20 +64,21 @@ public class CrossCatenaryRenderer extends CatenaryRenderer {
         Vector3f vert10 = new Vector3f();
         Quaternionf rotator = new Quaternionf();
         Vector3f segmentStart = new Vector3f(), segmentEnd = new Vector3f();
+        MathHelper.Catenary catenary = MathHelper.Catenary.of(distance, endPosition.y(), slack);
 
         float uvv1 = 0;
         float uvv0;
         float x = 0;
         float f0, f1 = 0;
         for (int segment = 0; segment < MAX_SEGMENTS; segment++) {
-            float gradient = (float) drip2prime(x * wrongDistanceFactor, distance, endPosition.y(), slack);
+            float gradient = (float) catenary.slope(x * wrongDistanceFactor);
             x += estimateDeltaX(desiredSegmentLength, gradient);
             x = Math.min(x, distanceXZ);
 
             f0 = f1;
             f1 = x / distanceXZ;
 
-            float y = (float) drip2(x * wrongDistanceFactor, distance, endPosition.y(), slack);
+            float y = (float) catenary.y(x * wrongDistanceFactor);
             segmentEnd.set(x, y, 0);
 
             rotAxis.set(segmentEnd.x() - segmentStart.x(), segmentEnd.y() - segmentStart.y(), segmentEnd.z() - segmentStart.z());

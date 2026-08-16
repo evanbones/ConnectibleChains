@@ -30,9 +30,11 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,6 +46,8 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
     private HashSet<ChainData> chainDataSet = new HashSet<>();
     @NotNull
     private Item sourceItem;
+    private float knotScale = Float.NaN;
+    private BlockState knotScaleState;
 
     public ChainKnotEntity(EntityType<ChainKnotEntity> entityType, Level level) {
         super(entityType, level);
@@ -115,6 +119,8 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
             }
 
             Chainable.tickChain(serverWorld, this);
+        } else {
+            resolveClientHolders();
         }
 
         if (!this.isRemoved()) {
@@ -122,14 +128,88 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
         }
     }
 
+    private void resolveClientHolders() {
+        boolean anyUnresolved = false;
+        for (ChainData chainData : chainDataSet) {
+            if (chainData.needsResolution()) {
+                anyUnresolved = true;
+                break;
+            }
+        }
+        if (!anyUnresolved) return;
+
+        for (ChainData chainData : new HashSet<>(chainDataSet)) {
+            getChainHolder(chainData);
+        }
+    }
+
     private void syncCollision() {
-        for (ChainData chainData : new HashSet<>(getChainDataSet())) {
-            Entity chainHolder = getChainHolder(chainData);
+        for (ChainData chainData : getChainDataSet()) {
+            Entity chainHolder = chainData.getResolvedHolder();
             if (chainHolder instanceof Chainable && !chainHolder.isRemoved()) {
                 ChainCollisionIndex.ensure(this.level(), this, chainHolder, chainData);
             }
         }
     }
+
+    public float getKnotScale() {
+        BlockState state = this.level().getBlockState(this.blockPosition());
+        if (Float.isNaN(knotScale) || state != knotScaleState) {
+            knotScaleState = state;
+            knotScale = computeKnotScale();
+        }
+        return knotScale;
+    }
+
+    private float computeKnotScale() {
+        Direction face = this.attachedFace;
+        BlockState blockState = this.level().getBlockState(this.blockPosition());
+        VoxelShape shape = blockState.getShape(this.level(), this.blockPosition());
+        if (shape.isEmpty()) return 5 / 6f;
+
+        double lx = this.getX() - Math.floor(this.getX());
+        double ly = this.getY() - Math.floor(this.getY());
+        double lz = this.getZ() - Math.floor(this.getZ());
+
+        double push = 0.05;
+        lx -= face.getStepX() * push;
+        ly -= face.getStepY() * push;
+        lz -= face.getStepZ() * push;
+
+        AABB attachmentPoint = new AABB(lx - 0.05, ly - 0.05, lz - 0.05, lx + 0.05, ly + 0.05, lz + 0.05);
+        AABB bestBox = null;
+
+        for (AABB box : shape.toAabbs()) {
+            if (box.intersects(attachmentPoint)) {
+                bestBox = box;
+                break;
+            }
+        }
+
+        if (bestBox == null) {
+            bestBox = shape.bounds();
+        }
+
+        double dim1 = 0, dim2 = 0;
+        switch (face.getAxis()) {
+            case Y -> {
+                dim1 = bestBox.getXsize();
+                dim2 = bestBox.getZsize();
+            }
+            case Z -> {
+                dim1 = bestBox.getXsize();
+                dim2 = bestBox.getYsize();
+            }
+            case X -> {
+                dim1 = bestBox.getYsize();
+                dim2 = bestBox.getZsize();
+            }
+        }
+
+        double minDim = Math.min(dim1, dim2);
+        return Math.max(0.5f, Math.min(1.5f, (float) (minDim + 0.0625) / 0.375f));
+    }
+
 
     @Override
     public void remove(@NotNull RemovalReason reason) {
@@ -267,8 +347,8 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
     @Override
     public @NotNull AABB getBoundingBoxForCulling() {
         AABB result = super.getBoundingBoxForCulling();
-        for (ChainData chainData : new HashSet<>(this.getChainDataSet())) {
-            Entity entity = this.getChainHolder(chainData);
+        for (ChainData chainData : this.getChainDataSet()) {
+            Entity entity = chainData.getResolvedHolder();
             if (entity == null) continue;
 
             result = result.minmax(entity.getBoundingBox());

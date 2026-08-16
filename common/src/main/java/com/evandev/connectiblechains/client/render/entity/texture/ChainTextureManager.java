@@ -2,6 +2,7 @@ package com.evandev.connectiblechains.client.render.entity.texture;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.client.ClientInitializer;
+import com.evandev.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
 import com.evandev.connectiblechains.client.render.entity.UVRect;
 import com.evandev.connectiblechains.client.render.entity.catenary.CatenaryModel;
 import com.evandev.connectiblechains.client.render.entity.catenary.CatenaryRenderer;
@@ -12,6 +13,7 @@ import com.google.gson.JsonElement;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,6 +26,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 import java.util.Optional;
@@ -35,6 +38,10 @@ public class ChainTextureManager extends SimpleJsonResourceReloadListener {
     private static final String MODEL_FILE_LOCATION = "models/entity/" + CommonClass.MODID;
     private static final Gson GSON = new GsonBuilder().create();
     private static final int EXPECTED_UNIQUE_CHAIN_COUNT = 64;
+    private final Map<Item, ResourceLocation> chainTextureCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, ResourceLocation> knotTextureCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, CatenaryRenderer> catenaryRendererCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, Optional<String>> tintCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
     private Map<ResourceLocation, CatenaryModel> models = new Object2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
 
     public ChainTextureManager() {
@@ -56,17 +63,40 @@ public class ChainTextureManager extends SimpleJsonResourceReloadListener {
     }
 
     public void clearCache() {
-        ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(it -> it.getChainRenderer().purge());
+        chainTextureCache.clear();
+        knotTextureCache.clear();
+        catenaryRendererCache.clear();
+        tintCache.clear();
+        ClientInitializer instance = ClientInitializer.getInstance();
+        if (instance != null)
+            instance.getChainKnotEntityRenderer().ifPresent(ChainKnotEntityRenderer::onResourceReload);
     }
 
-    public CatenaryRenderer getCatenaryRenderer(ResourceLocation sourceItemId) {
-        Optional<CatenaryModel> catenaryModel = Optional.ofNullable(models.get(sourceItemId));
-        ResourceLocation catenaryId = catenaryModel.flatMap(CatenaryModel::catenaryRendererId).orElse(DEFAULT_CATENARY);
-        Pair<UVRect, UVRect> uvMappings = catenaryModel.flatMap(CatenaryModel::uvRects).orElse(DEFAULT_UV);
-        return CatenaryRenderer.getRenderer(catenaryId, uvMappings);
+    public CatenaryRenderer getCatenaryRenderer(Item sourceItem) {
+        return catenaryRendererCache.computeIfAbsent(sourceItem, item -> {
+            ResourceLocation sourceItemId = BuiltInRegistries.ITEM.getKey(item);
+            Optional<CatenaryModel> catenaryModel = Optional.ofNullable(models.get(sourceItemId));
+            ResourceLocation catenaryId = catenaryModel.flatMap(CatenaryModel::catenaryRendererId).orElse(DEFAULT_CATENARY);
+            Pair<UVRect, UVRect> uvMappings = catenaryModel.flatMap(CatenaryModel::uvRects).orElse(DEFAULT_UV);
+            return CatenaryRenderer.getRenderer(catenaryId, uvMappings);
+        });
     }
 
     public ResourceLocation getChainTexture(Item sourceItem) {
+        return chainTextureCache.computeIfAbsent(sourceItem, this::resolveChainTexture);
+    }
+
+    @Nullable
+    public String getTint(Item sourceItem) {
+        return tintCache.computeIfAbsent(sourceItem,
+                item -> Optional.ofNullable(models.get(BuiltInRegistries.ITEM.getKey(item))).flatMap(CatenaryModel::tint)).orElse(null);
+    }
+
+    public ResourceLocation getKnotTexture(Item sourceItem) {
+        return knotTextureCache.computeIfAbsent(sourceItem, this::resolveKnotTexture);
+    }
+
+    private ResourceLocation resolveChainTexture(Item sourceItem) {
         ResourceLocation sourceItemId = BuiltInRegistries.ITEM.getKey(sourceItem);
         return Optional.ofNullable(models.get(sourceItemId))
                 .flatMap(CatenaryModel::textures)
@@ -77,8 +107,7 @@ public class ChainTextureManager extends SimpleJsonResourceReloadListener {
                             BlockState state = blockItem.getBlock().defaultBlockState();
                             TextureAtlasSprite sprite = Minecraft.getInstance().getBlockRenderer().getBlockModel(state).getParticleIcon();
                             return sprite.contents().name();
-                        } catch (Exception e) {
-                            // Fallback to default if model loading fails
+                        } catch (Exception ignored) {
                         }
                     }
                     return defaultChainTextureId(sourceItemId);
@@ -94,12 +123,7 @@ public class ChainTextureManager extends SimpleJsonResourceReloadListener {
                 });
     }
 
-    public Optional<String> getTint(Item sourceItem) {
-        ResourceLocation sourceItemId = BuiltInRegistries.ITEM.getKey(sourceItem);
-        return Optional.ofNullable(models.get(sourceItemId)).flatMap(CatenaryModel::tint);
-    }
-
-    public ResourceLocation getKnotTexture(Item sourceItem) {
+    private ResourceLocation resolveKnotTexture(Item sourceItem) {
         ResourceLocation sourceItemId = BuiltInRegistries.ITEM.getKey(sourceItem);
         return Optional.ofNullable(models.get(sourceItemId))
                 .flatMap(CatenaryModel::textures)
@@ -108,8 +132,7 @@ public class ChainTextureManager extends SimpleJsonResourceReloadListener {
                     try {
                         TextureAtlasSprite sprite = Minecraft.getInstance().getItemRenderer().getItemModelShaper().getItemModel(new ItemStack(sourceItem)).getParticleIcon();
                         return sprite.contents().name();
-                    } catch (Exception e) {
-                        // Fallback to default if model loading fails
+                    } catch (Exception ignored) {
                     }
                     return defaultKnotTextureId(sourceItemId);
                 }).withPath(p -> {

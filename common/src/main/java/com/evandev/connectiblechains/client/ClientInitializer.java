@@ -36,7 +36,7 @@ public class ClientInitializer {
         registerCatenaryRenders();
         AutoConfig.getConfigHolder(ModConfig.class).registerSaveListener((holder, config) -> {
             if (this.chainKnotEntityRenderer != null) {
-                this.chainKnotEntityRenderer.getChainRenderer().purge();
+                this.chainKnotEntityRenderer.onResourceReload();
             }
             return InteractionResult.PASS;
         });

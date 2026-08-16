@@ -24,12 +24,10 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BannerBlock;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
@@ -115,7 +113,7 @@ public class ChainRaycastHelper {
             Entity entity = (Entity) chainable;
             if (entity.distanceTo(player) > Chainable.getMaxChainLength() + reach) continue;
 
-            for (Chainable.ChainData cd : chainable.getChainDataSet()) {
+            for (Chainable.ChainData cd : new ArrayList<>(chainable.getChainDataSet())) {
                 if (cd.buntings.isEmpty() && cd.banners.isEmpty() && cd.hangings.isEmpty()) continue;
                 Entity h = chainable.getChainHolder(cd);
                 if (!(h instanceof ChainKnotEntity knot)) continue;
@@ -323,18 +321,21 @@ public class ChainRaycastHelper {
         Chainable.ChainData link = hit.chainData();
         if (isSlotOccupied(link, t, minTSpacing * 0.5f)) return false;
 
+        ResourceLocation blockId = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        BlockState hangState = HangingBlockPlacement.hangingState(blockId);
+
+        if (hangState != null) {
+            Vec3 anchor = HangingBlockPlacement.anchor(srcPos, dstPos, t, link.getSlack());
+            if (!HangingBlockPlacement.fitsInWorld(player.level(), hangState, anchor)) return false;
+        }
+
         if (player.level().isClientSide) return true;
 
-        ResourceLocation blockId = BuiltInRegistries.ITEM.getKey(stack.getItem());
         link.hangings.add(new Chainable.ChainData.HangingEntry(t, blockId));
         link.hangings.sort(Comparator.comparingDouble(Chainable.ChainData.HangingEntry::t));
         if (!player.isCreative()) stack.shrink(1);
 
-        Block hangBlock = BuiltInRegistries.BLOCK.get(blockId);
-        if (hangBlock != Blocks.AIR) {
-            BlockState hangState = hangBlock.defaultBlockState();
-            if (hangState.hasProperty(BlockStateProperties.HANGING))
-                hangState = hangState.setValue(BlockStateProperties.HANGING, true);
+        if (hangState != null) {
             BlockPos lightPos = HangingLightHelper.computeLightPos(chainedEntity, holderKnot, t, link.getSlack());
             if (lightPos != null)
                 HangingLightHelper.place((ServerLevel) player.level(), lightPos, hangState.getLightEmission());
@@ -400,8 +401,13 @@ public class ChainRaycastHelper {
             ServerLevel serverWorld = (ServerLevel) player.level();
             Entity holder = chainable.getChainHolder(link);
 
+            float newSlack = 1.0f / currentSag;
+            if (!hangingsFitAtSlack(serverWorld, chainedEntity, holder, link, newSlack)) {
+                return true;
+            }
+
             HangingLightHelper.removeAllForChain(serverWorld, chainedEntity, holder, link);
-            link.customSlack = 1.0f / currentSag;
+            link.customSlack = newSlack;
             HangingLightHelper.placeAllForChain(serverWorld, chainedEntity, holder, link);
 
             if (holder != null) {
@@ -412,6 +418,23 @@ public class ChainRaycastHelper {
                 EquipmentSlot slot = hand == InteractionHand.MAIN_HAND ? EquipmentSlot.MAINHAND : EquipmentSlot.OFFHAND;
                 stack.hurtAndBreak(1, player, slot);
             }
+        }
+        return true;
+    }
+
+    private static boolean hangingsFitAtSlack(Level level, Entity src, Entity dst, Chainable.ChainData link, float slack) {
+        if (link.hangings.isEmpty()) return true;
+        if (!(src instanceof ChainKnotEntity srcKnot) || !(dst instanceof ChainKnotEntity dstKnot)) return true;
+
+        Vec3 srcPos = srcKnot.getChainPos(1.0f);
+        Vec3 dstPos = dstKnot.getChainPos(1.0f);
+
+        for (Chainable.ChainData.HangingEntry entry : link.hangings) {
+            BlockState state = HangingBlockPlacement.hangingState(entry.blockId());
+            if (state == null) continue;
+
+            Vec3 anchor = HangingBlockPlacement.anchor(srcPos, dstPos, entry.t(), slack);
+            if (!HangingBlockPlacement.fitsInWorld(level, state, anchor)) return false;
         }
         return true;
     }
@@ -440,7 +463,7 @@ public class ChainRaycastHelper {
                 continue;
             }
 
-            for (Chainable.ChainData chainData : chainable.getChainDataSet()) {
+            for (Chainable.ChainData chainData : new ArrayList<>(chainable.getChainDataSet())) {
                 Entity chainHolder = chainable.getChainHolder(chainData);
                 if (chainHolder == null) continue;
 
@@ -462,11 +485,12 @@ public class ChainRaycastHelper {
 
                 int segments = Math.max(8, Math.min(64, (int) (distance * 1.5)));
                 Vec3 lastPoint = srcPos.add(0, -0.125, 0);
+                MathHelper.Catenary curve = MathHelper.Catenary.of(distance, dstPos.y() - srcPos.y(), chainData.getSlack());
 
                 for (int i = 1; i <= segments; i++) {
                     double tSeg = (double) i / segments;
                     double x = Mth.lerp(tSeg, srcPos.x(), dstPos.x());
-                    double y = srcPos.y() + MathHelper.drip2((tSeg * distance), distance, dstPos.y() - srcPos.y(), chainData.getSlack()) - 0.125;
+                    double y = srcPos.y() + curve.y(tSeg * distance) - 0.125;
                     double z = Mth.lerp(tSeg, srcPos.z(), dstPos.z());
                     Vec3 currentPoint = new Vec3(x, y, z);
 

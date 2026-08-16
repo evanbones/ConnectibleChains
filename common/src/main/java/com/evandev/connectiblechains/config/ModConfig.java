@@ -30,6 +30,9 @@ public class ModConfig implements ConfigData {
     private boolean collisionsEnabled = true;
 
     @ConfigEntry.Gui.Tooltip()
+    private boolean hangingBlockCollisions = true;
+
+    @ConfigEntry.Gui.Tooltip()
     private boolean debugDraw = Services.PLATFORM.isDevelopmentEnvironment();
 
     public float getChainHangAmount() {
@@ -71,8 +74,16 @@ public class ModConfig implements ConfigData {
         this.collisionsEnabled = collisionsEnabled;
     }
 
+    public boolean isHangingBlockCollisionsEnabled() {
+        return hangingBlockCollisions;
+    }
+
+    public void setHangingBlockCollisionsEnabled(boolean hangingBlockCollisions) {
+        this.hangingBlockCollisions = hangingBlockCollisions;
+    }
+
     public void syncToClient(ServerPlayer player) {
-        Services.NETWORK.sendToClient(player, new ConfigSyncPayload(chainHangAmount, maxChainRange, collisionsEnabled));
+        Services.NETWORK.sendToClient(player, new ConfigSyncPayload(chainHangAmount, maxChainRange, collisionsEnabled, hangingBlockCollisions));
     }
 
     public ModConfig copyFrom(ModConfig config) {
@@ -82,6 +93,7 @@ public class ModConfig implements ConfigData {
         this.showToolTip = config.showToolTip;
         this.showRangeWarningHud = config.showRangeWarningHud;
         this.collisionsEnabled = config.collisionsEnabled;
+        this.hangingBlockCollisions = config.hangingBlockCollisions;
         this.debugDraw = config.debugDraw;
         return this;
     }

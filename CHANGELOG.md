@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rewrote how chain collisions work to not use janky entities.
 - Chain collisions are now enabled by default.
 
+### Fixed
+
+- Mobs can now pathfind through chains with collision.
+
 ## [2.2.6] - 2026-08-06
 
 ### Added

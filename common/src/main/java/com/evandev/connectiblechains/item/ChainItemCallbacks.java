@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
 import net.minecraft.world.entity.player.Player;
@@ -155,7 +154,7 @@ public class ChainItemCallbacks {
     public static List<Chainable> collectChainablesAround(Level level, BlockPos pos, Predicate<Chainable> predicate) {
         double distance = CommonClass.runtimeConfig.getMaxChainRange();
         AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY(), pos.getZ()).inflate(distance);
-        return level.getEntitiesOfClass(Entity.class, box, entity -> entity instanceof Chainable chainable && predicate.test(chainable)).stream().map(Chainable.class::cast).toList();
+        return List.copyOf(level.getEntitiesOfClass(ChainKnotEntity.class, box, predicate));
     }
 
     public static boolean hasAnyLeadsToConnect(Level level, BlockPos pos, Player player) {

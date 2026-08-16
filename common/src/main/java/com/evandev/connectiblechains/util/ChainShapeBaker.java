@@ -5,6 +5,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,17 +20,18 @@ public final class ChainShapeBaker {
     private ChainShapeBaker() {
     }
 
-    public static ChainShape bake(Vec3 srcPos, Vec3 dstPos, float slack) {
+    public static ChainShape bake(Vec3 srcPos, Vec3 dstPos, float slack, @Nullable List<AABB> extraBoxes) {
         double distance = srcPos.distanceTo(dstPos);
         if (distance < 1.0E-4) return null;
 
         int segments = Math.max(8, Math.min(64, (int) (distance * 1.5)));
+        MathHelper.Catenary catenary = MathHelper.Catenary.of(distance, dstPos.y() - srcPos.y(), slack);
 
         Vec3[] samples = new Vec3[segments + 1];
         for (int i = 0; i <= segments; i++) {
             double t = (double) i / segments;
             double x = Mth.lerp(t, srcPos.x(), dstPos.x());
-            double y = srcPos.y() + MathHelper.drip2(t * distance, distance, dstPos.y() - srcPos.y(), slack);
+            double y = srcPos.y() + catenary.y(t * distance);
             double z = Mth.lerp(t, srcPos.z(), dstPos.z());
             samples[i] = new Vec3(x, y, z);
         }
@@ -43,6 +45,8 @@ public final class ChainShapeBaker {
             }
         }
         merged.add(enclose(samples, start, segments));
+
+        if (extraBoxes != null) merged.addAll(extraBoxes);
 
         AABB[] boxes = merged.toArray(new AABB[0]);
         VoxelShape[] shapes = new VoxelShape[boxes.length];

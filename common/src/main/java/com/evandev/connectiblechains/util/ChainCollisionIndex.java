@@ -8,6 +8,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -49,11 +50,13 @@ public final class ChainCollisionIndex {
         Vec3 src = chainAnchor(owner);
         Vec3 dst = chainAnchor(holder);
         float slack = chainData.getSlack();
+        int hangingsHash = hangingsHash(chainData);
 
         Map<Integer, Entry> owned = index.byOwner.get(ownerId);
         Entry existing = owned == null ? null : owned.get(holderId);
         if (existing != null
                 && existing.slack == slack
+                && existing.hangingsHash == hangingsHash
                 && existing.src.distanceToSqr(src) < POSITION_EPSILON
                 && existing.dst.distanceToSqr(dst) < POSITION_EPSILON) {
             existing.lastSeenTick = now;
@@ -62,11 +65,11 @@ public final class ChainCollisionIndex {
 
         index.unlink(ownerId, holderId);
 
-        ChainShapeBaker.ChainShape shape = ChainShapeBaker.bake(src, dst, slack);
+        ChainShapeBaker.ChainShape shape = ChainShapeBaker.bake(src, dst, slack, hangingBoxes(level, src, dst, slack, chainData));
         if (shape == null) return;
 
         long[] bucketKeys = bucketKeysFor(shape.bounds());
-        Entry entry = new Entry(owner, holder, shape, src, dst, slack, bucketKeys, now);
+        Entry entry = new Entry(owner, holder, shape, src, dst, slack, hangingsHash, bucketKeys, now);
         index.byOwner.computeIfAbsent(ownerId, k -> new ConcurrentHashMap<>()).put(holderId, entry);
         for (long bucketKey : bucketKeys) {
             index.buckets.computeIfAbsent(bucketKey, k -> new CopyOnWriteArrayList<>()).add(entry);
@@ -164,6 +167,33 @@ public final class ChainCollisionIndex {
         return false;
     }
 
+    private static int hangingsHash(Chainable.ChainData chainData) {
+        if (!CommonClass.runtimeConfig.isHangingBlockCollisionsEnabled()) return 0;
+        int hash = 1;
+        for (Chainable.ChainData.HangingEntry entry : chainData.hangings) {
+            hash = hash * 31 + Float.floatToIntBits(entry.t());
+            hash = hash * 31 + entry.blockId().hashCode();
+        }
+        return hash;
+    }
+
+    @Nullable
+    private static List<AABB> hangingBoxes(Level level, Vec3 src, Vec3 dst, float slack, Chainable.ChainData chainData) {
+        if (!CommonClass.runtimeConfig.isHangingBlockCollisionsEnabled()) return null;
+        if (chainData.hangings.isEmpty()) return null;
+
+        List<AABB> boxes = new ArrayList<>(chainData.hangings.size());
+        for (Chainable.ChainData.HangingEntry entry : chainData.hangings) {
+            BlockState state = HangingBlockPlacement.hangingState(entry.blockId());
+            if (state == null) continue;
+
+            Vec3 anchor = HangingBlockPlacement.anchor(src, dst, entry.t(), slack);
+            AABB box = HangingBlockPlacement.occupiedBox(level, state, anchor);
+            if (box != null) boxes.add(box);
+        }
+        return boxes.isEmpty() ? null : boxes;
+    }
+
     private static long[] bucketKeysFor(AABB bounds) {
         int minChunkX = SectionPos.blockToSectionCoord(Mth.floor(bounds.minX));
         int maxChunkX = SectionPos.blockToSectionCoord(Mth.floor(bounds.maxX));
@@ -214,17 +244,19 @@ public final class ChainCollisionIndex {
         final Vec3 src;
         final Vec3 dst;
         final float slack;
+        final int hangingsHash;
         final long[] bucketKeys;
         volatile long lastSeenTick;
 
         Entry(Entity owner, Entity holder, ChainShapeBaker.ChainShape shape, Vec3 src, Vec3 dst, float slack,
-              long[] bucketKeys, long lastSeenTick) {
+              int hangingsHash, long[] bucketKeys, long lastSeenTick) {
             this.owner = owner;
             this.holder = holder;
             this.shape = shape;
             this.src = src;
             this.dst = dst;
             this.slack = slack;
+            this.hangingsHash = hangingsHash;
             this.bucketKeys = bucketKeys;
             this.lastSeenTick = lastSeenTick;
         }
