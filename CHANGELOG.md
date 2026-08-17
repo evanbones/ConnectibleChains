@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.3.0] - 2026-08-16
 
+### Added
+
+- Blocks hung on a chain now have their own collision box (configurable).
+
 ### Changed
 
 - Rewrote how chain collisions work to not use janky entities.
@@ -15,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Mobs can now pathfind through chains with collision.
+- Numerous performance improvements.
+- Fixed lighting turning black when chain knots are covered by blocks.
+- Blocks can no longer be hung on a chain where they would clip into the world.
+- Blocks can no longer be placed into the space occupied by a block hung on a chain.
+- Fixed hung animated blocks not being animated.
 
 ## [2.2.6] - 2026-08-06
 

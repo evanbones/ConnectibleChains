@@ -134,6 +134,15 @@ public final class ChainCollisionIndex {
     }
 
     public static boolean intersects(Level level, AABB area) {
+        return scan(level, area, false);
+    }
+
+    public static boolean intersectsHangingBlock(Level level, AABB area) {
+        if (!CommonClass.runtimeConfig.isHangingBlockCollisionsEnabled()) return false;
+        return scan(level, area, true);
+    }
+
+    private static boolean scan(Level level, AABB area, boolean hangingOnly) {
         ChainCollisionIndex index = INDICES.get(level);
         if (index == null || index.buckets.isEmpty()) return false;
 
@@ -158,8 +167,9 @@ public final class ChainCollisionIndex {
                     ChainShapeBaker.ChainShape shape = entry.shape;
                     if (!shape.bounds().intersects(area)) continue;
 
-                    for (AABB box : shape.boxes()) {
-                        if (box.intersects(area)) return true;
+                    AABB[] boxes = shape.boxes();
+                    for (int i = hangingOnly ? shape.hangingFrom() : 0; i < boxes.length; i++) {
+                        if (boxes[i].intersects(area)) return true;
                     }
                 }
             }

@@ -390,8 +390,8 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
                 dstPos = chainHolder.getRopeHoldPosition(tickDelta);
             }
 
-            BlockPos blockPosOfStart = BlockPos.containing(entity.getEyePosition(tickDelta));
-            BlockPos blockPosOfEnd = BlockPos.containing(chainHolder.getEyePosition(tickDelta));
+            BlockPos blockPosOfStart = BlockPos.containing(entity.getLightProbePosition(tickDelta));
+            BlockPos blockPosOfEnd = BlockPos.containing(chainHolder.getLightProbePosition(tickDelta));
 
             ChainKnotEntityRenderState.ChainData renderChainData = state.claim();
             renderChainData.offset = srcPos.subtract(entityPos);

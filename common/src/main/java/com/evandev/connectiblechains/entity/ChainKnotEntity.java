@@ -29,6 +29,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
@@ -479,5 +480,27 @@ public class ChainKnotEntity extends HangingEntity implements Chainable, ChainLi
                 attachedFace.getStepY() * offset,
                 attachedFace.getStepZ() * offset
         );
+    }
+
+    @Override
+    public Vec3 getLightProbePosition(float partialTicks) {
+        AABB aabb = this.getBoundingBox();
+        BlockPos bestPos = this.blockPosition();
+        int best = Integer.MIN_VALUE;
+
+        for (BlockPos pos : BlockPos.betweenClosed(
+                BlockPos.containing(aabb.minX, aabb.minY, aabb.minZ),
+                BlockPos.containing(aabb.maxX, aabb.maxY, aabb.maxZ))) {
+            int brightness = Math.max(
+                    this.level().getBrightness(LightLayer.BLOCK, pos),
+                    this.level().getBrightness(LightLayer.SKY, pos));
+            if (brightness == 15) return Vec3.atCenterOf(pos);
+            if (brightness > best) {
+                best = brightness;
+                bestPos = pos.immutable();
+            }
+        }
+
+        return Vec3.atCenterOf(bestPos);
     }
 }

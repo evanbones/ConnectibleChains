@@ -12,6 +12,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
@@ -59,6 +60,22 @@ public final class HangingBlockPlacement {
         if (shape.isEmpty()) return null;
 
         return shape.bounds().move(anchor.x() - 0.5, anchor.y() - 1.0, anchor.z() - 0.5);
+    }
+
+    public static boolean isObstructedByHangingBlock(Level level, BlockState state, BlockPos pos, CollisionContext context) {
+        VoxelShape shape;
+        try {
+            shape = state.getCollisionShape(level, pos, context);
+        } catch (Exception e) {
+            return false;
+        }
+        if (shape.isEmpty()) return false;
+
+        for (AABB box : shape.toAabbs()) {
+            AABB moved = box.move(pos).deflate(CONTACT_TOLERANCE);
+            if (ChainCollisionIndex.intersectsHangingBlock(level, moved)) return true;
+        }
+        return false;
     }
 
     public static boolean fitsInWorld(Level level, BlockState state, Vec3 anchor) {

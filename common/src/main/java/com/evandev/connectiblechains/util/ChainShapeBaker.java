@@ -46,6 +46,7 @@ public final class ChainShapeBaker {
         }
         merged.add(enclose(samples, start, segments));
 
+        int hangingFrom = merged.size();
         if (extraBoxes != null) merged.addAll(extraBoxes);
 
         AABB[] boxes = merged.toArray(new AABB[0]);
@@ -56,7 +57,7 @@ public final class ChainShapeBaker {
             bounds = bounds.minmax(boxes[i]);
         }
 
-        return new ChainShape(bounds, boxes, shapes);
+        return new ChainShape(bounds, boxes, shapes, hangingFrom);
     }
 
     private static boolean canMerge(Vec3[] samples, int from, int to) {
@@ -97,6 +98,6 @@ public final class ChainShapeBaker {
                 maxX + HALF_WIDTH, maxY + EXTENT_ABOVE, maxZ + HALF_WIDTH);
     }
 
-    public record ChainShape(AABB bounds, AABB[] boxes, VoxelShape[] shapes) {
+    public record ChainShape(AABB bounds, AABB[] boxes, VoxelShape[] shapes, int hangingFrom) {
     }
 }
