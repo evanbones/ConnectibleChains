@@ -1,3 +1,3 @@
-### Fixed
+### Added
 
-- Fixed chain collisions with Lithium.
+- Added Windswept ice chains model (@Chloe).
