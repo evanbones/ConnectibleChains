@@ -14,14 +14,9 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.CubeDeformation;
-import net.minecraft.client.model.geom.builders.CubeListBuilder;
-import net.minecraft.client.model.geom.builders.LayerDefinition;
-import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraft.client.model.geom.builders.PartDefinition;
+import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.model.object.banner.BannerFlagModel;
 import net.minecraft.client.renderer.BiomeColors;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BannerRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -37,6 +32,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
@@ -228,7 +224,10 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity, Cha
         Vec3 endPos = chainData.endPos;
         Item sourceItem = chainData.sourceItem;
 
-        RenderType entityCutout = CommonClass.runtimeConfig.doDebugDraw() ? RenderTypes.lines() : RenderTypes.entityCutout(getChainTexture(sourceItem));
+        CatenaryRenderer renderer = getCatenaryRenderer(sourceItem);
+        RenderType chainType = CommonClass.runtimeConfig.doDebugDraw() ? RenderTypes.lines()
+                : renderer.isShaded() ? RenderTypes.entityCutout(getChainTexture(sourceItem))
+                : RenderTypes.entityCutoutCull(getChainTexture(sourceItem));
 
         Vector3f chainVec = new Vector3f((float) (endPos.x - startPos.x), (float) (endPos.y - startPos.y), (float) (endPos.z - startPos.z));
         float angleY = -(float) Math.atan2(chainVec.z(), chainVec.x());
@@ -237,12 +236,11 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity, Cha
         poseStack.translate(offset.x, offset.y, offset.z);
         poseStack.mulPose(new Quaternionf().rotateXYZ(0, angleY, 0));
 
-        collector.submitCustomGeometry(poseStack, entityCutout, (pose, vertexConsumer) -> {
+        collector.submitCustomGeometry(poseStack, chainType, (pose, vertexConsumer) -> {
             PoseStack tempStack = new PoseStack();
             tempStack.last().pose().set(pose.pose());
             tempStack.last().normal().set(pose.normal());
 
-            CatenaryRenderer renderer = getCatenaryRenderer(sourceItem);
             if (chainData.useBaked) {
                 chainRenderer.renderBaked(renderer, vertexConsumer, tempStack, chainVec, chainData.slack, chainData.chainedEntityBlockLight, chainData.chainHolderBlockLight, chainData.chainedEntitySkyLight, chainData.chainHolderSkyLight, chainData.tintColor);
             } else {
@@ -402,7 +400,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity, Cha
     private int computeChainTintColor(Level level, Item sourceItem, Vec3 srcPos, Vec3 dstPos) {
         return getTextureManager().getTint(sourceItem)
                 .map(tint -> 0xFF000000 | sampleBiomeColor(level, tint, BlockPos.containing(srcPos.lerp(dstPos, 0.5))))
-                .orElse(0xFFCCCCCC);
+                .orElse(0xFFFFFFFF);
     }
 
     private int computeKnotTintColor(Level level, Item sourceItem, BlockPos pos) {

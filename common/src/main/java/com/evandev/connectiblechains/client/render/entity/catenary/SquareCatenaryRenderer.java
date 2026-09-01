@@ -20,7 +20,7 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
     public ChainModel buildModel(Vector3f chainVec, float slack) {
         float desiredSegmentLength = 1f / CommonClass.runtimeConfig.getQuality();
         int initialCapacity = (int) (4f * chainVec.length() / desiredSegmentLength);
-        ChainModel.Builder builder = ChainModel.builder(initialCapacity);
+        ChainModel.Builder builder = ChainModel.builder(initialCapacity, isShaded());
 
         if (chainVec.x() == 0F && chainVec.z() == 0F) {
             buildFaceVertical(builder, chainVec);

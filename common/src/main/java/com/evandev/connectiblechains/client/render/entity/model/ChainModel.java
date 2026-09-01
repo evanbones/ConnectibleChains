@@ -11,12 +11,13 @@ import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
-public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, float[] normals) {
+public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, float[] normals, boolean shaded) {
 
-    private static final int LIGHT_STEPS = 16;
+    // Matches the 25 vertex pairs vanilla interpolates a leash over.
+    private static final int LIGHT_STEPS = 25;
 
-    public static Builder builder(int initialCapacity) {
-        return new Builder(initialCapacity);
+    public static Builder builder(int initialCapacity, boolean shaded) {
+        return new Builder(initialCapacity, shaded);
     }
 
     private static int[] packLightRamp(int bLight0, int bLight1, int sLight0, int sLight1) {
@@ -53,7 +54,9 @@ public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, 
             float tz = Math.fma(m.m02(), x, Math.fma(m.m12(), y, Math.fma(m.m22(), z, m.m32())));
 
             norm.set(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
-            normalMatrix.transform(norm);
+            if (shaded) {
+                normalMatrix.transform(norm);
+            }
 
             int step = Mth.clamp((int) (lightFractions[i] * (LIGHT_STEPS - 1) + 0.5f), 0, LIGHT_STEPS - 1);
 
@@ -76,10 +79,12 @@ public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, 
         private final FloatArrayList uvs;
         private final FloatArrayList lightFractions;
         private final FloatArrayList normals;
+        private final boolean shaded;
         private int size;
         private float currentFraction = 0f;
 
-        public Builder(int initialCapacity) {
+        public Builder(int initialCapacity, boolean shaded) {
+            this.shaded = shaded;
             vertices = new FloatArrayList(initialCapacity * 3);
             uvs = new FloatArrayList(initialCapacity * 2);
             lightFractions = new FloatArrayList(initialCapacity);
@@ -121,7 +126,7 @@ public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, 
             if (uvs.size() != size * 2) CommonClass.LOGGER.error("Wrong count of uvs");
             if (lightFractions.size() != size) CommonClass.LOGGER.error("Wrong count of light fractions");
 
-            return new ChainModel(vertices.toFloatArray(), uvs.toFloatArray(), lightFractions.toFloatArray(), normals.toFloatArray());
+            return new ChainModel(vertices.toFloatArray(), uvs.toFloatArray(), lightFractions.toFloatArray(), normals.toFloatArray(), shaded);
         }
     }
 }
