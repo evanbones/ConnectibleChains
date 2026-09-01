@@ -17,6 +17,7 @@ import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.client.model.object.banner.BannerFlagModel;
 import net.minecraft.client.renderer.BiomeColors;
+import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BannerRenderer;
 import net.minecraft.client.renderer.entity.EntityRenderer;
@@ -292,6 +293,8 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity, Cha
             poseStack.mulPose(new Quaternionf().rotateX((float) Math.PI));
             poseStack.scale(0.66f, 0.66f, 0.66f);
             poseStack.translate(0, 0.375, 0.07);
+            collector.submitModel(bannerFlagModel, 0.0F, poseStack, light, OverlayTexture.NO_OVERLAY, -1,
+                    Sheets.BANNER_BASE, sprites, 0, null);
             BannerRenderer.submitPatterns(sprites, poseStack, collector, light, OverlayTexture.NO_OVERLAY,
                     bannerFlagModel, 0.0F, true, entry.color(), patterns, null);
             poseStack.popPose();
