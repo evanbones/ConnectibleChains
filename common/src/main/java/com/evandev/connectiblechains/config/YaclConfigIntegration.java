@@ -2,7 +2,9 @@ package com.evandev.connectiblechains.config;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.client.ClientInitializer;
+import com.evandev.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
 import com.evandev.connectiblechains.platform.Services;
+import com.evandev.connectiblechains.util.ChainCollisionIndex;
 import dev.isxander.yacl3.api.ConfigCategory;
 import dev.isxander.yacl3.api.Option;
 import dev.isxander.yacl3.api.OptionDescription;
@@ -23,8 +25,9 @@ public class YaclConfigIntegration {
                 .save(() -> {
                     ModConfig.save();
                     CommonClass.runtimeConfig.copyFrom(config);
+                    ChainCollisionIndex.clearAll();
                     if (ClientInitializer.getInstance() != null) {
-                        ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(r -> r.getChainRenderer().purge());
+                        ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(ChainKnotEntityRenderer::onResourceReload);
                     }
                 });
 
@@ -63,9 +66,23 @@ public class YaclConfigIntegration {
                 .build());
 
         generalCategory.option(Option.<Boolean>createBuilder()
+                .name(Component.translatable("config.connectiblechains.showRangeWarningHud"))
+                .description(OptionDescription.of(Component.translatable("config.connectiblechains.showRangeWarningHud.tooltip")))
+                .binding(true, config::doShowRangeWarningHud, config::setShowRangeWarningHud)
+                .controller(TickBoxControllerBuilder::create)
+                .build());
+
+        generalCategory.option(Option.<Boolean>createBuilder()
                 .name(Component.translatable("config.connectiblechains.collisionsEnabled"))
                 .description(OptionDescription.of(Component.translatable("config.connectiblechains.collisionsEnabled.tooltip")))
-                .binding(false, config::isCollisionsEnabled, config::setCollisionsEnabled)
+                .binding(true, config::isCollisionsEnabled, config::setCollisionsEnabled)
+                .controller(TickBoxControllerBuilder::create)
+                .build());
+
+        generalCategory.option(Option.<Boolean>createBuilder()
+                .name(Component.translatable("config.connectiblechains.hangingBlockCollisions"))
+                .description(OptionDescription.of(Component.translatable("config.connectiblechains.hangingBlockCollisions.tooltip")))
+                .binding(true, config::isHangingBlockCollisionsEnabled, config::setHangingBlockCollisionsEnabled)
                 .controller(TickBoxControllerBuilder::create)
                 .build());
 

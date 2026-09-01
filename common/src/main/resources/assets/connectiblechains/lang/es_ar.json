@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot": "Nudo de Cadena",
   "message.connectiblechains.connectible_chain": "Compatible con Catenaria [Shift]",
   "message.connectiblechains.connectible_chain_detailed": "¡Hacé clic en cercas o muros para crear una catenaria!",
-  "entity.connectiblechains.chain_collision": "Colisión de Cadena",
   
   "text.autoconfig.connectiblechains.option.chainHangAmount": "Colgado de Cadena",
   "text.autoconfig.connectiblechains.option.maxChainRange": "Distancia Máxima de Cadena",

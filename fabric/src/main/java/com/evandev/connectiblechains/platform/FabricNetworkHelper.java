@@ -1,8 +1,11 @@
 package com.evandev.connectiblechains.platform;
 
+import com.evandev.connectiblechains.networking.packet.BannerSyncS2CPacket;
+import com.evandev.connectiblechains.networking.packet.BuntingSyncS2CPacket;
 import com.evandev.connectiblechains.networking.packet.ChainAttachS2CPacket;
 import com.evandev.connectiblechains.networking.packet.ChainSlackSyncS2CPacket;
 import com.evandev.connectiblechains.networking.packet.ConfigSyncPayload;
+import com.evandev.connectiblechains.networking.packet.HangingSyncS2CPacket;
 import com.evandev.connectiblechains.platform.services.INetworkHelper;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -23,6 +26,9 @@ public class FabricNetworkHelper implements INetworkHelper {
         PayloadTypeRegistry.clientboundPlay().register(ChainAttachS2CPacket.TYPE, ChainAttachS2CPacket.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(ConfigSyncPayload.TYPE, ConfigSyncPayload.STREAM_CODEC);
         PayloadTypeRegistry.clientboundPlay().register(ChainSlackSyncS2CPacket.TYPE, ChainSlackSyncS2CPacket.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(BuntingSyncS2CPacket.TYPE, BuntingSyncS2CPacket.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(BannerSyncS2CPacket.TYPE, BannerSyncS2CPacket.STREAM_CODEC);
+        PayloadTypeRegistry.clientboundPlay().register(HangingSyncS2CPacket.TYPE, HangingSyncS2CPacket.STREAM_CODEC);
     }
 
     @Override

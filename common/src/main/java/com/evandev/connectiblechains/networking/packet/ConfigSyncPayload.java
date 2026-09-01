@@ -2,6 +2,7 @@ package com.evandev.connectiblechains.networking.packet;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.client.ClientInitializer;
+import com.evandev.connectiblechains.util.ChainCollisionIndex;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -10,7 +11,8 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
-                                boolean collisionsEnabled) implements CustomPacketPayload {
+                                boolean collisionsEnabled,
+                                boolean hangingBlockCollisions) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ConfigSyncPayload> TYPE = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(CommonClass.MODID, "config_sync"));
 
@@ -18,6 +20,7 @@ public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
             ByteBufCodecs.FLOAT, ConfigSyncPayload::chainHangAmount,
             ByteBufCodecs.INT, ConfigSyncPayload::maxChainRange,
             ByteBufCodecs.BOOL, ConfigSyncPayload::collisionsEnabled,
+            ByteBufCodecs.BOOL, ConfigSyncPayload::hangingBlockCollisions,
             ConfigSyncPayload::new
     );
 
@@ -27,6 +30,8 @@ public record ConfigSyncPayload(float chainHangAmount, int maxChainRange,
             CommonClass.runtimeConfig.setChainHangAmount(payload.chainHangAmount());
             CommonClass.runtimeConfig.setMaxChainRange(payload.maxChainRange());
             CommonClass.runtimeConfig.setCollisionsEnabled(payload.collisionsEnabled());
+            CommonClass.runtimeConfig.setHangingBlockCollisionsEnabled(payload.hangingBlockCollisions());
+            ChainCollisionIndex.clearAll();
 
             if (ClientInitializer.getInstance() != null) {
                 ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(r -> r.getChainRenderer().purge());

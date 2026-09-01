@@ -5,12 +5,123 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.6] - 2026-04-17
+## [2.3.2] - 2026-08-19
+
+### Added
+
+- Added Windswept ice chains model (@Chloe).
+
+## [2.3.1] - 2026-08-17
 
 ### Fixed
 
-- Fixed Waxed Copper Chain textures on 26.1.
-- Lowered required NeoForge version.
+- Fixed chain collisions with Lithium.
+
+## [2.3.0] - 2026-08-16
+
+### Added
+
+- Blocks hung on a chain now have their own collision box (configurable).
+
+### Changed
+
+- Rewrote how chain collisions work to not use janky entities.
+- Chain collisions are now enabled by default.
+
+### Fixed
+
+- Mobs can now pathfind through chains with collision.
+- Numerous performance improvements.
+- Fixed lighting turning black when chain knots are covered by blocks.
+- Blocks can no longer be hung on a chain where they would clip into the world.
+- Blocks can no longer be placed into the space occupied by a block hung on a chain.
+- Fixed hung animated blocks not being animated.
+
+## [2.2.6] - 2026-08-06
+
+### Added
+
+- Added `#minecraft:chains` to the catenary items tag.
+
+### Fixed
+
+- Fixed rendering chain knots on sideways Quark posts.
+
+## [2.2.5] - 2026-07-12
+
+### Added
+
+- Added `#minecraft:bars` to the `chain_connectible` tag and `#minecraft:lanterns` to the `hangable_items` tag
+
+### Fixed
+
+- Fixed z-fighting on vine knots.
+
+## [2.2.4] - 2026-07-11
+
+### Fixed
+
+- Fixed shift-click chain behavior.
+
+## [2.2.3] - 2026-06-30
+
+### Fixed
+
+- Added additional checks to discard stale chain collision entities.
+
+## [2.2.2] - 2026-06-22
+
+### Fixed
+
+- Improved hanging lantern visuals.
+
+## [2.2.1] - 2026-06-16
+
+### Fixed
+
+- Fixed hanging catenary items sometimes being invisible.
+
+## [2.2.0] - 2026-06-16
+
+### Added
+
+- Added more default modded lanterns to `hangable_items` (@Fyoncle).
+
+### Changed
+
+- Hanging items are now removed by hand (right-clicking) instead of by using shears.
+
+### Fixed
+
+- Fixed modded shears not being recognized for chain/rope interactions.
+- Fixed covering lanterns with blocks causing their light sources to disappear.
+- Items can no longer be placed at the very ends of catenaries.
+
+## [2.1.0] - 2026-06-14
+
+### Added
+
+- Added a `hangable_items` tag for blocks that can hang off chains.
+- `/connectchain` now takes an argument to place different chain types.
+- Lanterns can now be placed on chains.
+    - This also includes Quark Paper Lanterns by default.
+    - To add additional modded lanterns, just add them to the `hangable_items` tag.
+
+## [2.0.0] - 2026-06-12
+
+### Added
+
+- Supplementaries Buntings can now be placed on any Ropes!
+- Banners can now be placed on ropes.
+- Added default support for Caverns and Chasms chains.
+- Added Vines to the default chain connectible tag.
+- Added support for texture biome tinting.
+- Added an indication that a chain is reaching a maximum length (configurable).
+
+### Changed
+
+- Pressing shift will now bypass chain/rope knot placement.
+- Tweaked sounds for shearing.
 
 ## [1.2.5] - 2026-03-04
 

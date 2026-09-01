@@ -2,6 +2,7 @@ package com.evandev.connectiblechains.client.render.entity.texture;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.client.ClientInitializer;
+import com.evandev.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
 import com.evandev.connectiblechains.client.render.entity.UVRect;
 import com.evandev.connectiblechains.client.render.entity.catenary.CatenaryModel;
 import com.evandev.connectiblechains.client.render.entity.catenary.CatenaryRenderer;
@@ -9,6 +10,7 @@ import com.evandev.connectiblechains.util.MathHelper;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
@@ -30,6 +32,10 @@ public class ChainTextureManager extends SimplePreparableReloadListener<Map<Iden
     public static final Pair<UVRect, UVRect> DEFAULT_UV = new Pair<>(UVRect.DEFAULT_SIDE_A, UVRect.DEFAULT_SIDE_B);
     private static final String MODEL_FILE_LOCATION = "models/entity/" + CommonClass.MODID;
     private static final int EXPECTED_UNIQUE_CHAIN_COUNT = 64;
+    private final Map<Item, Identifier> chainTextureCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, Identifier> knotTextureCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, CatenaryRenderer> catenaryRendererCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
+    private final Map<Item, Optional<String>> tintCache = new Reference2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
     private Map<Identifier, CatenaryModel> models = new Object2ObjectOpenHashMap<>(EXPECTED_UNIQUE_CHAIN_COUNT);
 
     private static @NotNull Identifier defaultChainTextureId(Identifier itemId) {
@@ -73,17 +79,39 @@ public class ChainTextureManager extends SimplePreparableReloadListener<Map<Iden
     }
 
     public void clearCache() {
-        ClientInitializer.getInstance().getChainKnotEntityRenderer().ifPresent(it -> it.getChainRenderer().purge());
+        chainTextureCache.clear();
+        knotTextureCache.clear();
+        catenaryRendererCache.clear();
+        tintCache.clear();
+        ClientInitializer instance = ClientInitializer.getInstance();
+        if (instance != null)
+            instance.getChainKnotEntityRenderer().ifPresent(ChainKnotEntityRenderer::onResourceReload);
     }
 
-    public CatenaryRenderer getCatenaryRenderer(Identifier sourceItemId) {
-        Optional<CatenaryModel> catenaryModel = Optional.ofNullable(models.get(sourceItemId));
-        Identifier catenaryId = catenaryModel.flatMap(CatenaryModel::catenaryRendererId).orElse(DEFAULT_CATENARY);
-        Pair<UVRect, UVRect> uvMappings = catenaryModel.flatMap(CatenaryModel::uvRects).orElse(DEFAULT_UV);
-        return CatenaryRenderer.getRenderer(catenaryId, uvMappings);
+    public CatenaryRenderer getCatenaryRenderer(Item sourceItem) {
+        return catenaryRendererCache.computeIfAbsent(sourceItem, item -> {
+            Identifier sourceItemId = BuiltInRegistries.ITEM.getKey(item);
+            Optional<CatenaryModel> catenaryModel = Optional.ofNullable(models.get(sourceItemId));
+            Identifier catenaryId = catenaryModel.flatMap(CatenaryModel::catenaryRendererId).orElse(DEFAULT_CATENARY);
+            Pair<UVRect, UVRect> uvMappings = catenaryModel.flatMap(CatenaryModel::uvRects).orElse(DEFAULT_UV);
+            return CatenaryRenderer.getRenderer(catenaryId, uvMappings);
+        });
     }
 
     public Identifier getChainTexture(Item sourceItem) {
+        return chainTextureCache.computeIfAbsent(sourceItem, this::resolveChainTexture);
+    }
+
+    public Optional<String> getTint(Item sourceItem) {
+        return tintCache.computeIfAbsent(sourceItem,
+                item -> Optional.ofNullable(models.get(BuiltInRegistries.ITEM.getKey(item))).flatMap(CatenaryModel::tint));
+    }
+
+    public Identifier getKnotTexture(Item sourceItem) {
+        return knotTextureCache.computeIfAbsent(sourceItem, this::resolveKnotTexture);
+    }
+
+    private Identifier resolveChainTexture(Item sourceItem) {
         Identifier sourceItemId = BuiltInRegistries.ITEM.getKey(sourceItem);
         return Optional.ofNullable(models.get(sourceItemId))
                 .flatMap(CatenaryModel::textures)
@@ -100,7 +128,7 @@ public class ChainTextureManager extends SimplePreparableReloadListener<Map<Iden
                 });
     }
 
-    public Identifier getKnotTexture(Item sourceItem) {
+    private Identifier resolveKnotTexture(Item sourceItem) {
         Identifier sourceItemId = BuiltInRegistries.ITEM.getKey(sourceItem);
         return Optional.ofNullable(models.get(sourceItemId))
                 .flatMap(CatenaryModel::textures)

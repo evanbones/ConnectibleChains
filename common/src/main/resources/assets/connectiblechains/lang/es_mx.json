@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot" : "Nudo de Cadena",
   "message.connectiblechains.connectible_chain" : "Compatible con Catenaria [Mayús]",
   "message.connectiblechains.connectible_chain_detailed" : "Haz clic en cercas/paredes para crear una catenaria!",
-  "entity.connectiblechains.chain_collision" : "Colisión de Cadenas",
   "text.autoconfig.connectiblechains.option.chainHangAmount" : "Curveo de Cadena",
   "text.autoconfig.connectiblechains.option.maxChainRange" : "Distancia Máxima de Cadena",
   "text.autoconfig.connectiblechains.option.quality" : "Calidad de Cadena",

@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot": "Chain Knot",
   "message.connectiblechains.connectible_chain": "Catenary Compatible [Shift]",
   "message.connectiblechains.connectible_chain_detailed": "Click on fences/walls to create a catenary!",
-  "entity.connectiblechains.chain_collision": "Chain Collision",
 
   "config.connectiblechains.title": "Connectible Chains Configs",
   "config.connectiblechains.category.general": "General",
@@ -16,8 +15,13 @@
   "config.connectiblechains.quality.tooltip": "Affects the visual quality of the chain.",
   "config.connectiblechains.showToolTip": "Show Catenary Compatibility Tooltip",
   "config.connectiblechains.showToolTip.tooltip": "Show tooltip over chain items that are compatible with this mod.",
+  "config.connectiblechains.showRangeWarningHud": "Show Range Warning",
+  "config.connectiblechains.showRangeWarningHud.tooltip": "Display an action bar message when a chain is nearing its maximum length.",
+  "message.connectiblechains.chain_range_warning": "Chain nearing maximum length!",
   "config.connectiblechains.collisionsEnabled": "Enable Chain Collisions",
   "config.connectiblechains.collisionsEnabled.tooltip": "If disabled, chains will not have a collision box and entities can pass through them.",
+  "config.connectiblechains.hangingBlockCollisions": "Enable Hanging Block Collisions",
+  "config.connectiblechains.hangingBlockCollisions.tooltip": "If enabled, blocks hung on a chain (such as lanterns) get their own collision box. Requires chain collisions to be enabled.",
   "config.connectiblechains.debugDraw": "Debug Chain Rendering",
   "config.connectiblechains.debugDraw.tooltip": "If enabled, shows debug vectors and entity counts for chains. Typically used for development.",
 

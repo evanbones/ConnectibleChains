@@ -39,7 +39,8 @@ public class ConnectibleChainsMod {
 
     private void onRightClickBlock(PlayerInteractEvent.RightClickBlock event) {
         InteractionResult result = ChainItemCallbacks.chainUseEvent(event.getEntity(), event.getLevel(), event.getHand(), event.getHitVec());
-        if (result.consumesAction()) {
+
+        if (result.consumesAction() || result == InteractionResult.FAIL) {
             event.setCanceled(true);
             event.setCancellationResult(result);
         }
@@ -52,6 +53,21 @@ public class ConnectibleChainsMod {
     }
 
     private void onRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        if (ChainRaycastHelper.tryPlaceBunting(event.getEntity(), event.getHand())) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            return;
+        }
+        if (ChainRaycastHelper.tryPlaceBanner(event.getEntity(), event.getHand())) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            return;
+        }
+        if (ChainRaycastHelper.tryPlaceHanging(event.getEntity(), event.getHand())) {
+            event.setCanceled(true);
+            event.setCancellationResult(InteractionResult.SUCCESS);
+            return;
+        }
         if (ChainRaycastHelper.tryAdjustSlack(event.getEntity(), event.getHand())) {
             event.setCanceled(true);
             event.setCancellationResult(InteractionResult.SUCCESS);

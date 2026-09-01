@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot": "Kettingknoop",
   "message.connectiblechains.connectible_chain": "Kettinglijn compatibel [Shift]",
   "message.connectiblechains.connectible_chain_detailed": "Klik op hekken/muren om een kettinglijn te maken!",
-  "entity.connectiblechains.chain_collision": "Kettingmuur",
   "text.autoconfig.connectiblechains.option.chainHangAmount": "Kettingdruppel",
   "text.autoconfig.connectiblechains.option.maxChainRange": "Maximale kettingafstand",
   "text.autoconfig.connectiblechains.option.quality": "Kettingkwaliteit",

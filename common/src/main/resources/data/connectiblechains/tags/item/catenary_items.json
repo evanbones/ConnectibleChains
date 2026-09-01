@@ -1,7 +1,11 @@
 {
   "replace": false,
   "values": [
+    "#connectiblechains:ropes",
     "#c:chains",
-    "#connectiblechains:ropes"
+    {
+      "required": false,
+      "id": "#minecraft:chains"
+    }
   ]
 }

@@ -21,7 +21,9 @@ public class ModConfig {
     private int maxChainRange = 32;
     private int quality = 4;
     private boolean showToolTip = true;
-    private boolean collisionsEnabled = false;
+    private boolean showRangeWarningHud = true;
+    private boolean collisionsEnabled = true;
+    private boolean hangingBlockCollisions = true;
     private boolean debugDraw = Services.PLATFORM.isDevelopmentEnvironment();
 
     public static ModConfig get() {
@@ -102,8 +104,16 @@ public class ModConfig {
         this.showToolTip = showToolTip;
     }
 
+    public boolean isHangingBlockCollisionsEnabled() {
+        return hangingBlockCollisions;
+    }
+
+    public void setHangingBlockCollisionsEnabled(boolean hangingBlockCollisions) {
+        this.hangingBlockCollisions = hangingBlockCollisions;
+    }
+
     public void syncToClient(ServerPlayer player) {
-        Services.NETWORK.sendToClient(player, new ConfigSyncPayload(chainHangAmount, maxChainRange, collisionsEnabled));
+        Services.NETWORK.sendToClient(player, new ConfigSyncPayload(chainHangAmount, maxChainRange, collisionsEnabled, hangingBlockCollisions));
     }
 
     public ModConfig copyFrom(ModConfig config) {
@@ -111,8 +121,18 @@ public class ModConfig {
         this.maxChainRange = config.maxChainRange;
         this.quality = config.quality;
         this.showToolTip = config.showToolTip;
+        this.showRangeWarningHud = config.showRangeWarningHud;
         this.collisionsEnabled = config.collisionsEnabled;
+        this.hangingBlockCollisions = config.hangingBlockCollisions;
         this.debugDraw = config.debugDraw;
         return this;
+    }
+
+    public boolean doShowRangeWarningHud() {
+        return showRangeWarningHud;
+    }
+
+    public void setShowRangeWarningHud(boolean showRangeWarningHud) {
+        this.showRangeWarningHud = showRangeWarningHud;
     }
 }

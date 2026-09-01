@@ -4,9 +4,11 @@
   "package": "com.evandev.connectiblechains.mixin",
   "compatibilityLevel": "JAVA_18",
   "mixins": [
+    "BlockItemMixin",
+    "EntityMixin",
+    "WalkNodeEvaluatorMixin"
   ],
   "client": [
-    "MixinMinecraft"
   ],
   "server": [],
   "injectors": {
