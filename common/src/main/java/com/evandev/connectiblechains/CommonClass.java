@@ -2,6 +2,7 @@ package com.evandev.connectiblechains;
 
 import com.evandev.connectiblechains.config.ModConfig;
 import com.evandev.connectiblechains.entity.ModEntityTypes;
+import com.evandev.connectiblechains.util.ChainCollisionIndex;
 import com.mojang.logging.LogUtils;
 import me.shedaniel.autoconfig.AutoConfig;
 import me.shedaniel.autoconfig.ConfigHolder;
@@ -26,6 +27,7 @@ public class CommonClass {
 
         configHolder.registerSaveListener((holder, config) -> {
             runtimeConfig.copyFrom(config);
+            ChainCollisionIndex.clearAll();
             return InteractionResult.PASS;
         });
     }

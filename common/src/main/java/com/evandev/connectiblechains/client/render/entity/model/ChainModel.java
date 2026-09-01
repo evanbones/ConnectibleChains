@@ -3,44 +3,66 @@ package com.evandev.connectiblechains.client.render.entity.model;
 import com.evandev.connectiblechains.CommonClass;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.texture.OverlayTexture;
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.Mth;
+import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector4f;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, float[] normals) {
+
+    private static final int LIGHT_STEPS = 16;
 
     public static Builder builder(int initialCapacity) {
         return new Builder(initialCapacity);
     }
 
-    public void render(VertexConsumer buffer, PoseStack matrices, int bLight0, int bLight1, int sLight0, int sLight1) {
-        Matrix4f modelMatrix = matrices.last().pose();
-        org.joml.Matrix3f normalMatrix = matrices.last().normal();
+    private static int[] packLightRamp(int bLight0, int bLight1, int sLight0, int sLight1) {
+        int[] ramp = new int[LIGHT_STEPS];
+        for (int i = 0; i < LIGHT_STEPS; i++) {
+            float f = (float) i / (LIGHT_STEPS - 1);
+            ramp[i] = LightCoordsUtil.pack(
+                    (int) Mth.lerp(f, (float) bLight0, (float) bLight1),
+                    (int) Mth.lerp(f, (float) sLight0, (float) sLight1));
+        }
+        return ramp;
+    }
+
+    public void render(VertexConsumer buffer, PoseStack matrices, int bLight0, int bLight1, int sLight0, int sLight1, int tintColor) {
+        Matrix4f m = matrices.last().pose();
+        Matrix3f normalMatrix = matrices.last().normal();
+        float r = ((tintColor >> 16) & 0xFF) / 255.0f;
+        float g = ((tintColor >> 8) & 0xFF) / 255.0f;
+        float b = (tintColor & 0xFF) / 255.0f;
+        float a = ((tintColor >> 24) & 0xFF) / 255.0f;
+
+        int[] lightRamp = packLightRamp(bLight0, bLight1, sLight0, sLight1);
+
         int count = vertices.length / 3;
+        Vector3f norm = new Vector3f();
 
         for (int i = 0; i < count; i++) {
-            float f = lightFractions[i];
-            int blockLight = (int) Mth.lerp(f, (float) bLight0, (float) bLight1);
-            int skyLight = (int) Mth.lerp(f, (float) sLight0, (float) sLight1);
-            int light = LightCoordsUtil.pack(blockLight, skyLight);
+            float x = vertices[i * 3];
+            float y = vertices[i * 3 + 1];
+            float z = vertices[i * 3 + 2];
 
-            Vector4f pos = new Vector4f(vertices[i * 3], vertices[i * 3 + 1], vertices[i * 3 + 2], 1.0F);
-            pos.mul(modelMatrix);
+            float tx = Math.fma(m.m00(), x, Math.fma(m.m10(), y, Math.fma(m.m20(), z, m.m30())));
+            float ty = Math.fma(m.m01(), x, Math.fma(m.m11(), y, Math.fma(m.m21(), z, m.m31())));
+            float tz = Math.fma(m.m02(), x, Math.fma(m.m12(), y, Math.fma(m.m22(), z, m.m32())));
 
-            Vector3f norm = new Vector3f(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
+            norm.set(normals[i * 3], normals[i * 3 + 1], normals[i * 3 + 2]);
             normalMatrix.transform(norm);
 
-            buffer.addVertex(pos.x, pos.y, pos.z)
-                    .setColor(1.0f, 1.0f, 1.0f, 1f)
+            int step = Mth.clamp((int) (lightFractions[i] * (LIGHT_STEPS - 1) + 0.5f), 0, LIGHT_STEPS - 1);
+
+            buffer
+                    .addVertex(tx, ty, tz)
+                    .setColor(r, g, b, a)
                     .setUv(uvs[i * 2], uvs[i * 2 + 1])
                     .setOverlay(OverlayTexture.NO_OVERLAY)
-                    .setLight(light)
+                    .setLight(lightRamp[step])
                     .setNormal(norm.x(), norm.y(), norm.z());
 
             if (CommonClass.runtimeConfig.doDebugDraw()) {
@@ -50,18 +72,18 @@ public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, 
     }
 
     public static class Builder {
-        private final List<Float> vertices;
-        private final List<Float> uvs;
-        private final List<Float> lightFractions;
-        private final List<Float> normals;
+        private final FloatArrayList vertices;
+        private final FloatArrayList uvs;
+        private final FloatArrayList lightFractions;
+        private final FloatArrayList normals;
         private int size;
         private float currentFraction = 0f;
 
         public Builder(int initialCapacity) {
-            vertices = new ArrayList<>(initialCapacity * 3);
-            uvs = new ArrayList<>(initialCapacity * 2);
-            lightFractions = new ArrayList<>(initialCapacity);
-            normals = new ArrayList<>(initialCapacity * 3);
+            vertices = new FloatArrayList(initialCapacity * 3);
+            uvs = new FloatArrayList(initialCapacity * 2);
+            lightFractions = new FloatArrayList(initialCapacity);
+            normals = new FloatArrayList(initialCapacity * 3);
         }
 
         public Builder fraction(float f) {
@@ -99,16 +121,7 @@ public record ChainModel(float[] vertices, float[] uvs, float[] lightFractions, 
             if (uvs.size() != size * 2) CommonClass.LOGGER.error("Wrong count of uvs");
             if (lightFractions.size() != size) CommonClass.LOGGER.error("Wrong count of light fractions");
 
-            return new ChainModel(toFloatArray(vertices), toFloatArray(uvs), toFloatArray(lightFractions), toFloatArray(normals));
-        }
-
-        private float[] toFloatArray(List<Float> floats) {
-            float[] array = new float[floats.size()];
-            int i = 0;
-            for (float f : floats) {
-                array[i++] = f;
-            }
-            return array;
+            return new ChainModel(vertices.toFloatArray(), uvs.toFloatArray(), lightFractions.toFloatArray(), normals.toFloatArray());
         }
     }
 }

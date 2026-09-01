@@ -24,18 +24,11 @@ public class MathHelper {
     }
 
     public static double drip2(double x, double d, double h, double slack) {
-        double a = slack * Math.max(1.5, d / 2.5);
-
-        double p1 = a * asinh((h / (2D * a)) * (1D / Math.sinh(d / (2D * a))));
-        double p2 = -a * Math.cosh((2D * p1 - d) / (2D * a));
-        return p2 + a * Math.cosh((((2D * x) + (2D * p1)) - d) / (2D * a));
+        return Catenary.of(d, h, slack).y(x);
     }
 
     public static double drip2prime(double x, double d, double h, double slack) {
-        double a = slack * Math.max(1.5, d / 2.5);
-
-        double p1 = a * asinh((h / (2D * a)) * (1D / Math.sinh(d / (2D * a))));
-        return Math.sinh((2 * x + 2 * p1 - d) / (2 * a));
+        return Catenary.of(d, h, slack).slope(x);
     }
 
     public static Vec3 middleOf(Vec3 a, Vec3 b) {
@@ -52,5 +45,33 @@ public class MathHelper {
         offset.normalize();
         offset.normalize(2 / 16f);
         return new Vec3(offset);
+    }
+
+    public static final class Catenary {
+        private final double a;
+        private final double invA;
+        private final double phase;
+        private final double offset;
+
+        private Catenary(double a, double phase) {
+            this.a = a;
+            this.invA = 1D / a;
+            this.phase = phase;
+            this.offset = -a * Math.cosh(phase);
+        }
+
+        public static Catenary of(double d, double h, double slack) {
+            double a = slack * Math.max(1.5, d / 2.5);
+            double p1 = a * asinh((h / (2D * a)) * (1D / Math.sinh(d / (2D * a))));
+            return new Catenary(a, (2D * p1 - d) / (2D * a));
+        }
+
+        public double y(double x) {
+            return offset + a * Math.cosh(Math.fma(x, invA, phase));
+        }
+
+        public double slope(double x) {
+            return Math.sinh(Math.fma(x, invA, phase));
+        }
     }
 }

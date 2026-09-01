@@ -12,7 +12,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.decoration.LeashFenceKnotEntity;
 import net.minecraft.world.entity.player.Player;
@@ -52,6 +51,10 @@ public class ChainItemCallbacks {
             Direction knotDir = determineKnotDirection(blockState, hitResult.getDirection());
 
             if (stack.is(ModTagRegistry.CATENARY_ITEMS)) {
+                if (player.isShiftKeyDown()) {
+                    return InteractionResult.PASS;
+                }
+
                 if (existingKnot != null && existingKnot.getSourceItem() != stack.getItem()) {
                     return InteractionResult.FAIL;
                 }
@@ -59,8 +62,13 @@ public class ChainItemCallbacks {
                 if (level instanceof ServerLevel serverWorld) {
                     ChainKnotEntity knot = existingKnot != null ? existingKnot : ChainKnotEntity.getOrCreate(serverWorld, blockPos, stack.getItem(), knotDir);
                     return knot.interact(player, hand, hitResult.getLocation());
+                } else {
+                    if (existingKnot != null) {
+                        return existingKnot.interact(player, hand, hitResult.getLocation());
+                    }
+
+                    return InteractionResult.SUCCESS;
                 }
-                return InteractionResult.SUCCESS;
             }
 
             List<Chainable> draggedChains = collectChainablesAround(level, blockPos, entity -> entity.getChainData(player) != null);
@@ -76,6 +84,7 @@ public class ChainItemCallbacks {
                 if (level instanceof ServerLevel serverWorld) {
                     return attachHeldChainsToBlock(player, serverWorld, blockPos, knotDir);
                 }
+
                 return InteractionResult.SUCCESS;
             }
         }
@@ -144,7 +153,7 @@ public class ChainItemCallbacks {
     public static List<Chainable> collectChainablesAround(Level level, BlockPos pos, Predicate<Chainable> predicate) {
         double distance = CommonClass.runtimeConfig.getMaxChainRange();
         AABB box = new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX(), pos.getY(), pos.getZ()).inflate(distance);
-        return level.getEntitiesOfClass(Entity.class, box, entity -> entity instanceof Chainable chainable && predicate.test(chainable)).stream().map(Chainable.class::cast).toList();
+        return List.copyOf(level.getEntitiesOfClass(ChainKnotEntity.class, box, predicate));
     }
 
     public static boolean hasAnyLeadsToConnect(Level level, BlockPos pos, Player player) {

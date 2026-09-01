@@ -1,13 +1,14 @@
 package com.evandev.connectiblechains.client;
 
 import com.evandev.connectiblechains.CommonClass;
-import com.evandev.connectiblechains.client.render.entity.ChainCollisionEntityRenderer;
 import com.evandev.connectiblechains.client.render.entity.ChainKnotEntityRenderer;
 import com.evandev.connectiblechains.entity.ModEntityTypes;
 import com.evandev.connectiblechains.item.ChainItemCallbacks;
 import com.evandev.connectiblechains.networking.packet.ChainBreakC2SPacket;
+import com.evandev.connectiblechains.networking.packet.DecorationRemoveC2SPacket;
 import com.evandev.connectiblechains.util.ChainRaycastHelper;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionResult;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -48,7 +49,6 @@ public class ConnectibleChainsModClient {
                 ClientInitializer.getInstance().setChainKnotEntityRenderer(renderer);
                 return renderer;
             });
-            event.registerEntityRenderer(ModEntityTypes.CHAIN_COLLISION.get(), ChainCollisionEntityRenderer::new);
         }
 
         @SubscribeEvent
@@ -78,6 +78,24 @@ public class ConnectibleChainsModClient {
         public static void onLeftClickEmpty(PlayerInteractEvent.LeftClickEmpty event) {
             if (ChainRaycastHelper.tryBreakChain(event.getEntity())) {
                 ClientPacketDistributor.sendToServer(ChainBreakC2SPacket.INSTANCE);
+            }
+        }
+
+        @SubscribeEvent
+        public static void onRightClickEmpty(PlayerInteractEvent.RightClickEmpty event) {
+            if (ChainRaycastHelper.tryRemoveDecoration(event.getEntity(), event.getHand())) {
+                ClientPacketDistributor.sendToServer(DecorationRemoveC2SPacket.INSTANCE);
+                event.getEntity().swing(event.getHand());
+            }
+        }
+
+        @SubscribeEvent
+        public static void onRightClickBlockEmpty(PlayerInteractEvent.RightClickBlock event) {
+            if (ChainRaycastHelper.tryRemoveDecoration(event.getEntity(), event.getHand())) {
+                ClientPacketDistributor.sendToServer(DecorationRemoveC2SPacket.INSTANCE);
+                event.getEntity().swing(event.getHand());
+                event.setCanceled(true);
+                event.setCancellationResult(InteractionResult.SUCCESS);
             }
         }
     }

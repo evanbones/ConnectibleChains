@@ -2,7 +2,6 @@
   "entity.connectiblechains.chain_knot" : "鎖鏈結",
   "message.connectiblechains.connectible_chain" : "懸鏈線相容 [Shift]",
   "message.connectiblechains.connectible_chain_detailed" : "點選柵欄／牆壁以建立懸鏈線！",
-  "entity.connectiblechains.chain_collision" : "鎖鏈碰撞",
   "text.autoconfig.connectiblechains.option.chainHangAmount" : "鎖鏈垂度",
   "text.autoconfig.connectiblechains.option.maxChainRange" : "最大鎖鏈距離",
   "text.autoconfig.connectiblechains.option.quality" : "鎖鏈品質",

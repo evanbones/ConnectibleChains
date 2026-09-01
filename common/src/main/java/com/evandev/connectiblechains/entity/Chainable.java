@@ -2,25 +2,31 @@ package com.evandev.connectiblechains.entity;
 
 import com.evandev.connectiblechains.CommonClass;
 import com.evandev.connectiblechains.item.ChainItemCallbacks;
-import com.evandev.connectiblechains.networking.packet.ChainAttachS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainSlackSyncS2CPacket;
+import com.evandev.connectiblechains.networking.packet.*;
 import com.evandev.connectiblechains.platform.Services;
 import com.evandev.connectiblechains.tag.ModTagRegistry;
+import com.evandev.connectiblechains.util.HangingLightHelper;
 import com.mojang.datafixers.util.Either;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.decoration.HangingEntity;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.entity.BannerPatternLayers;
 import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -77,6 +83,27 @@ public interface Chainable {
                     if (slack >= 0) {
                         newChainData.customSlack = slack;
                     }
+                    ChainData finalChainData = newChainData;
+                    element.childrenList("Buntings").ifPresent(buntingList -> {
+                        for (ValueInput buntingElement : buntingList) {
+                            buntingElement.read("Color", DyeColor.CODEC).ifPresent(color -> finalChainData.buntings.add(new ChainData.BuntingEntry(buntingElement.getFloatOr("T", 0f), color)));
+                        }
+                    });
+                    element.childrenList("Banners").ifPresent(bannerList -> {
+                        for (ValueInput bannerElement : bannerList) {
+                            CompoundTag data = bannerElement.read("Data", CompoundTag.CODEC).orElse(new CompoundTag());
+                            DyeColor color = DyeColor.byName(data.getStringOr("BaseColor", "white"), DyeColor.WHITE);
+                            finalChainData.banners.add(new ChainData.BannerEntry(bannerElement.getFloatOr("T", 0f), color, data));
+                        }
+                    });
+                    element.childrenList("Hangings").ifPresent(hangingList -> {
+                        for (ValueInput hangingElement : hangingList) {
+                            Identifier blockId = Identifier.tryParse(hangingElement.getStringOr("Block", ""));
+                            if (blockId != null) {
+                                finalChainData.hangings.add(new ChainData.HangingEntry(hangingElement.getFloatOr("T", 0f), blockId));
+                            }
+                        }
+                    });
                     result.add(newChainData);
                 }
             }
@@ -86,6 +113,15 @@ public interface Chainable {
 
     private static <E extends HangingEntity & Chainable> void resolveChainDataSet(E entity, HashSet<ChainData> chainDataSet) {
         if (!(entity.level() instanceof ServerLevel serverWorld)) return;
+
+        boolean anyUnresolved = false;
+        for (ChainData chainData : chainDataSet) {
+            if (chainData.unresolvedChainData != null) {
+                anyUnresolved = true;
+                break;
+            }
+        }
+        if (!anyUnresolved) return;
 
         for (ChainData chainData : new HashSet<>(chainDataSet)) {
             if (chainData.unresolvedChainData != null) {
@@ -97,6 +133,9 @@ public interface Chainable {
                     if (chainHolder != null) {
                         ChainData newChainData = new ChainData(chainHolder, chainData.sourceItem);
                         newChainData.customSlack = chainData.customSlack;
+                        newChainData.buntings.addAll(chainData.buntings);
+                        newChainData.banners.addAll(chainData.banners);
+                        newChainData.hangings.addAll(chainData.hangings);
                         entity.replaceChainData(chainData, null);
                         attachChain(entity, newChainData, null, true);
                     }
@@ -111,6 +150,9 @@ public interface Chainable {
                     if (chainHolder != null) {
                         ChainData newChainData = new ChainData(chainHolder, chainData.sourceItem);
                         newChainData.customSlack = chainData.customSlack;
+                        newChainData.buntings.addAll(chainData.buntings);
+                        newChainData.banners.addAll(chainData.banners);
+                        newChainData.hangings.addAll(chainData.hangings);
                         entity.replaceChainData(chainData, null);
                         attachChain(entity, newChainData, null, true);
                     }
@@ -129,12 +171,33 @@ public interface Chainable {
             if (entity.level() instanceof ServerLevel serverWorld) {
                 if (dropItem) {
                     entity.spawnAtLocation(serverWorld, new ItemStack(chainData.sourceItem), 0.0f);
+                    for (ChainData.BuntingEntry entry : chainData.buntings) {
+                        Item buntingItem = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("supplementaries", "bunting_" + entry.color().getName()));
+                        if (buntingItem != Items.AIR) {
+                            entity.spawnAtLocation(serverWorld, new ItemStack(buntingItem), 0.0f);
+                        }
+                    }
+                    for (ChainData.BannerEntry entry : chainData.banners) {
+                        Item bannerItem = BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace(entry.color().getName() + "_banner"));
+                        ItemStack bannerStack = bannerItem.getDefaultInstance();
+                        if (entry.data().contains("Pattern")) {
+                            var ctx = serverWorld.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+                            BannerPatternLayers.CODEC.parse(ctx, entry.data().get("Pattern"))
+                                    .result().ifPresent(p -> bannerStack.set(DataComponents.BANNER_PATTERNS, p));
+                        }
+                        entity.spawnAtLocation(serverWorld, bannerStack, 0.0f);
+                    }
+                    for (ChainData.HangingEntry entry : chainData.hangings) {
+                        Item hangingItem = BuiltInRegistries.ITEM.getValue(entry.blockId());
+                        if (hangingItem != Items.AIR)
+                            entity.spawnAtLocation(serverWorld, new ItemStack(hangingItem), 0.0f);
+                    }
                 }
 
                 if (sendPacket) {
                     Services.NETWORK.sendToAllClients(serverWorld.getServer(), new ChainAttachS2CPacket(entity, holder, null, chainData.sourceItem));
                 }
-                ChainCollisionEntity.destroyCollision(serverWorld, chainData);
+                HangingLightHelper.removeAllForChain(serverWorld, entity, holder, chainData);
 
                 if (holder instanceof ChainKnotEntity knot) {
                     checkAndDiscardKnot(serverWorld, knot);
@@ -171,14 +234,23 @@ public interface Chainable {
             if (chainData.customSlack >= 0) {
                 Services.NETWORK.sendToAllClients(serverLevel.getServer(), new ChainSlackSyncS2CPacket(entity.getId(), chainData.chainHolder.getId(), chainData.customSlack));
             }
-            if (chainData.chainHolder instanceof Chainable) {
-                ChainCollisionEntity.createCollision(entity, chainData);
+            if (!chainData.buntings.isEmpty()) {
+                Services.NETWORK.sendToAllClients(serverLevel.getServer(), new BuntingSyncS2CPacket(entity.getId(), chainData.chainHolder.getId(), new ArrayList<>(chainData.buntings)));
             }
+            if (!chainData.banners.isEmpty()) {
+                Services.NETWORK.sendToAllClients(serverLevel.getServer(), new BannerSyncS2CPacket(entity.getId(), chainData.chainHolder.getId(), new ArrayList<>(chainData.banners)));
+            }
+            if (!chainData.hangings.isEmpty()) {
+                Services.NETWORK.sendToAllClients(serverLevel.getServer(), new HangingSyncS2CPacket(entity.getId(), chainData.chainHolder.getId(), new ArrayList<>(chainData.hangings)));
+            }
+            HangingLightHelper.placeAllForChain(serverLevel, entity, chainData.chainHolder, chainData);
         }
     }
 
     static <E extends HangingEntity & Chainable> void tickChain(ServerLevel level, E entity) {
         HashSet<ChainData> chainDataSet = entity.getChainDataSet();
+        if (chainDataSet.isEmpty()) return;
+
         resolveChainDataSet(entity, chainDataSet);
 
         for (ChainData chainData : new HashSet<>(chainDataSet)) {
@@ -202,11 +274,35 @@ public interface Chainable {
                         continue;
                     }
 
-                    if (chainHolder instanceof Chainable) {
-                        ChainCollisionEntity.createCollision(entity, chainData);
+                    if (!chainData.hangings.isEmpty() && level.getGameTime() % 40 == 0) {
+                        HangingLightHelper.placeAllForChain(level, entity, chainHolder, chainData);
                     }
 
-                    if (distanceTo > getMaxChainLength()) {
+                    double maxRange = getMaxChainLength();
+
+                    if (chainHolder instanceof Player player) {
+                        double warningStart = maxRange * 0.75;
+                        if (distanceTo > warningStart) {
+                            float ratio = (float) ((distanceTo - warningStart) / (maxRange - warningStart));
+                            int interval = Math.max(2, (int) (20.0f * (1.0f - ratio)));
+                            if (++chainData.warningTickCounter >= interval) {
+                                chainData.warningTickCounter = 0;
+                                SoundType soundType = chainData.getSourceBlockSoundGroup();
+                                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                                        soundType.getHitSound(), SoundSource.PLAYERS, 0.4f,
+                                        0.6f + player.level().getRandom().nextFloat() * 0.4f);
+                                if (CommonClass.runtimeConfig.doShowRangeWarningHud() && player instanceof ServerPlayer serverPlayer) {
+                                    serverPlayer.sendSystemMessage(
+                                            Component.translatable("message.connectiblechains.chain_range_warning").withStyle(ChatFormatting.YELLOW),
+                                            true);
+                                }
+                            }
+                        } else {
+                            chainData.warningTickCounter = 0;
+                        }
+                    }
+
+                    if (distanceTo > maxRange) {
                         entity.breakLongChain(chainData);
                     }
                 }
@@ -225,6 +321,9 @@ public interface Chainable {
             if (chainHolder != null) {
                 ChainData newData = new ChainData(chainHolder, chainData.sourceItem);
                 newData.customSlack = chainData.customSlack;
+                newData.buntings.addAll(chainData.buntings);
+                newData.banners.addAll(chainData.banners);
+                newData.hangings.addAll(chainData.hangings);
                 entity.replaceChainData(chainData, newData);
             }
         }
@@ -309,6 +408,33 @@ public interface Chainable {
                         elementOutput.putInt("RelY", blockPos.getY());
                         elementOutput.putInt("RelZ", blockPos.getZ());
                     });
+
+                    if (!chainData.buntings.isEmpty()) {
+                        ValueOutput.ValueOutputList buntingListOutput = elementOutput.childrenList("Buntings");
+                        for (ChainData.BuntingEntry entry : chainData.buntings) {
+                            ValueOutput buntingOutput = buntingListOutput.addChild();
+                            buntingOutput.putFloat("T", entry.t());
+                            buntingOutput.putString("Color", entry.color().getName());
+                        }
+                    }
+
+                    if (!chainData.banners.isEmpty()) {
+                        ValueOutput.ValueOutputList bannerListOutput = elementOutput.childrenList("Banners");
+                        for (ChainData.BannerEntry entry : chainData.banners) {
+                            ValueOutput bannerOutput = bannerListOutput.addChild();
+                            bannerOutput.putFloat("T", entry.t());
+                            bannerOutput.store("Data", CompoundTag.CODEC, entry.data());
+                        }
+                    }
+
+                    if (!chainData.hangings.isEmpty()) {
+                        ValueOutput.ValueOutputList hangingListOutput = elementOutput.childrenList("Hangings");
+                        for (ChainData.HangingEntry entry : chainData.hangings) {
+                            ValueOutput hangingOutput = hangingListOutput.addChild();
+                            hangingOutput.putFloat("T", entry.t());
+                            hangingOutput.putString("Block", entry.blockId().toString());
+                        }
+                    }
                 }
             }
         }
@@ -360,11 +486,19 @@ public interface Chainable {
 
     @Nullable
     default ChainData getChainData(@Nullable Entity holder) {
-        if (holder != null) {
-            for (ChainData chainData : new HashSet<>(getChainDataSet())) {
-                if (getChainHolder(chainData) == holder) {
-                    return chainData;
-                }
+        if (holder == null) return null;
+
+        boolean anyUnresolved = false;
+        for (ChainData chainData : getChainDataSet()) {
+            if (chainData.getResolvedHolder() == holder) return chainData;
+            if (chainData.needsResolution()) anyUnresolved = true;
+        }
+
+        if (!anyUnresolved) return null;
+
+        for (ChainData chainData : new HashSet<>(getChainDataSet())) {
+            if (getChainHolder(chainData) == holder) {
+                return chainData;
             }
         }
         return null;
@@ -381,15 +515,18 @@ public interface Chainable {
     Vec3 getChainPos(float delta);
 
     final class ChainData {
-        public final ArrayList<Integer> collisionStorage = new ArrayList<>(16);
         @NotNull
         public final Item sourceItem;
         public final int unresolvedChainHolderId;
+        public final List<BuntingEntry> buntings = new ArrayList<>();
+        public final List<BannerEntry> banners = new ArrayList<>();
+        public final List<HangingEntry> hangings = new ArrayList<>();
         @Nullable
         private final Entity chainHolder;
         @Nullable
         public Either<UUID, BlockPos> unresolvedChainData;
         public float customSlack = -1f;
+        public int warningTickCounter = 0;
         private boolean isDead = false;
 
         public ChainData(@Nullable Either<UUID, BlockPos> unresolvedChainData, @NotNull Item sourceItem) {
@@ -417,6 +554,15 @@ public interface Chainable {
             return customSlack < 0 ? CommonClass.runtimeConfig.getChainHangAmount() : customSlack;
         }
 
+        @Nullable
+        public Entity getResolvedHolder() {
+            return chainHolder;
+        }
+
+        public boolean needsResolution() {
+            return chainHolder == null && unresolvedChainHolderId != 0;
+        }
+
         public SoundType getSourceBlockSoundGroup() {
             return Chainable.getSourceBlockSoundGroup(sourceItem);
         }
@@ -438,7 +584,9 @@ public interface Chainable {
 
         @Override
         public int hashCode() {
-            return Objects.hash(getHolderId(), unresolvedChainData, sourceItem);
+            int hash = getHolderId();
+            hash = 31 * hash + (unresolvedChainData == null ? 0 : unresolvedChainData.hashCode());
+            return 31 * hash + System.identityHashCode(sourceItem);
         }
 
         public void kill() {
@@ -458,7 +606,16 @@ public interface Chainable {
 
         @Override
         public String toString() {
-            return "ChainData{" + "collisionStorage=" + collisionStorage + ", unresolvedChainData=" + unresolvedChainData + ", sourceItem=" + sourceItem + ", unresolvedChainHolderId=" + unresolvedChainHolderId + ", chainHolder=" + chainHolder + ", customSlack=" + customSlack + '}';
+            return "ChainData{" + "unresolvedChainData=" + unresolvedChainData + ", sourceItem=" + sourceItem + ", unresolvedChainHolderId=" + unresolvedChainHolderId + ", chainHolder=" + chainHolder + ", customSlack=" + customSlack + '}';
+        }
+
+        public record BuntingEntry(float t, DyeColor color) {
+        }
+
+        public record BannerEntry(float t, DyeColor color, CompoundTag data) {
+        }
+
+        public record HangingEntry(float t, Identifier blockId) {
         }
     }
 }

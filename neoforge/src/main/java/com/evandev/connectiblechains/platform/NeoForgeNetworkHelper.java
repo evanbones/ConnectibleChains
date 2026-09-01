@@ -1,9 +1,6 @@
 package com.evandev.connectiblechains.platform;
 
-import com.evandev.connectiblechains.networking.packet.ChainAttachS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ChainBreakC2SPacket;
-import com.evandev.connectiblechains.networking.packet.ChainSlackSyncS2CPacket;
-import com.evandev.connectiblechains.networking.packet.ConfigSyncPayload;
+import com.evandev.connectiblechains.networking.packet.*;
 import com.evandev.connectiblechains.platform.services.INetworkHelper;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -39,10 +36,34 @@ public class NeoForgeNetworkHelper implements INetworkHelper {
                 (payload, context) -> context.enqueueWork(() -> ChainSlackSyncS2CPacket.handle(payload, context.player()))
         );
 
+        registrar.playToClient(
+                BuntingSyncS2CPacket.TYPE,
+                BuntingSyncS2CPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> BuntingSyncS2CPacket.handle(payload, context.player()))
+        );
+
+        registrar.playToClient(
+                BannerSyncS2CPacket.TYPE,
+                BannerSyncS2CPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> BannerSyncS2CPacket.handle(payload, context.player()))
+        );
+
+        registrar.playToClient(
+                HangingSyncS2CPacket.TYPE,
+                HangingSyncS2CPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> HangingSyncS2CPacket.handle(payload, context.player()))
+        );
+
         registrar.playToServer(
                 ChainBreakC2SPacket.TYPE,
                 ChainBreakC2SPacket.STREAM_CODEC,
                 (payload, context) -> context.enqueueWork(() -> ChainBreakC2SPacket.handle(payload, context.player()))
+        );
+
+        registrar.playToServer(
+                DecorationRemoveC2SPacket.TYPE,
+                DecorationRemoveC2SPacket.STREAM_CODEC,
+                (payload, context) -> context.enqueueWork(() -> DecorationRemoveC2SPacket.handle(context.player()))
         );
     }
 
