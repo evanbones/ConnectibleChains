@@ -19,7 +19,7 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 public class ConnectibleChainsModClient {
-    @EventBusSubscriber(modid = CommonClass.MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = CommonClass.MODID, value = Dist.CLIENT)
     public static class ClientModBusEvents {
 
         @SubscribeEvent
@@ -52,7 +52,7 @@ public class ConnectibleChainsModClient {
         }
     }
 
-    @EventBusSubscriber(modid = CommonClass.MODID, bus = EventBusSubscriber.Bus.GAME, value = Dist.CLIENT)
+    @EventBusSubscriber(modid = CommonClass.MODID, value = Dist.CLIENT)
     public static class ClientForgeEvents {
 
         @SubscribeEvent
