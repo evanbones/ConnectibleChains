@@ -20,7 +20,7 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
     public ChainModel buildModel(Vector3f chainVec, float slack) {
         float desiredSegmentLength = 1f / CommonClass.runtimeConfig.getQuality();
         int initialCapacity = (int) (4f * chainVec.length() / desiredSegmentLength);
-        ChainModel.Builder builder = ChainModel.builder(initialCapacity);
+        ChainModel.Builder builder = ChainModel.builder(initialCapacity, isShaded());
 
         if (chainVec.x() == 0F && chainVec.z() == 0F) {
             buildFaceVertical(builder, chainVec);
@@ -60,7 +60,7 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
 
         float f0 = inset / Math.max(length, 1e-4F), f1 = 1F - f0;
         float uvv0 = 0F, uvv1 = Math.abs(yEnd - yStart) / CHAIN_SCALE;
-        build4Sides(builder, f0, f1, uvv0, uvv1, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
+        build4Sides(builder, f0, f1, uvv0, uvv1, normalA, normalB, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
     }
 
     private void buildFace(ChainModel.Builder builder, Vector3f endPosition, float slack) {
@@ -135,7 +135,7 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
             uvv0 = uvv1;
             uvv1 = uvv0 + actualSegmentLength / CHAIN_SCALE;
 
-            build4Sides(builder, f0, f1, uvv0, uvv1, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
+            build4Sides(builder, f0, f1, uvv0, uvv1, normalA, normalB, vert00A, vert01A, vert10A, vert11A, vert00B, vert01B, vert10B, vert11B);
 
             if (x >= xLimit) {
                 break;
@@ -144,25 +144,20 @@ public class SquareCatenaryRenderer extends CatenaryRenderer {
         }
     }
 
-    private void build4Sides(ChainModel.Builder builder, float f0, float f1, float uvv0, float uvv1, Vector3f vert00A, Vector3f vert01A, Vector3f vert10A, Vector3f vert11A, Vector3f vert00B, Vector3f vert01B, Vector3f vert10B, Vector3f vert11B) {
-        builder.fraction(f0).vertex(vert00A).uv(SIDE_A.x0() / 16f, uvv0).next();
-        builder.fraction(f0).vertex(vert01B).uv(SIDE_A.x1() / 16f, uvv0).next();
-        builder.fraction(f1).vertex(vert11B).uv(SIDE_A.x1() / 16f, uvv1).next();
-        builder.fraction(f1).vertex(vert10A).uv(SIDE_A.x0() / 16f, uvv1).next();
+    private void build4Sides(ChainModel.Builder builder, float f0, float f1, float uvv0, float uvv1, Vector3f normalA, Vector3f normalB, Vector3f vert00A, Vector3f vert01A, Vector3f vert10A, Vector3f vert11A, Vector3f vert00B, Vector3f vert01B, Vector3f vert10B, Vector3f vert11B) {
+        float a0 = SIDE_A.x0() / 16f;
+        float a1 = SIDE_A.x1() / 16f;
+        float b0 = SIDE_B.x0() / 16f;
+        float b1 = SIDE_B.x1() / 16f;
 
-        builder.fraction(f0).vertex(vert00A).uv(SIDE_B.x0() / 16f, uvv0).next();
-        builder.fraction(f0).vertex(vert00B).uv(SIDE_B.x1() / 16f, uvv0).next();
-        builder.fraction(f1).vertex(vert10B).uv(SIDE_B.x1() / 16f, uvv1).next();
-        builder.fraction(f1).vertex(vert10A).uv(SIDE_B.x0() / 16f, uvv1).next();
+        Vector3f outBMinusA = new Vector3f(normalB).sub(normalA);
+        Vector3f outAMinusB = new Vector3f(outBMinusA).negate();
+        Vector3f outNegSum = new Vector3f(normalA).add(normalB).negate();
+        Vector3f outSum = new Vector3f(outNegSum).negate();
 
-        builder.fraction(f0).vertex(vert00B).uv(SIDE_A.x1() / 16f, uvv0).next();
-        builder.fraction(f0).vertex(vert01A).uv(SIDE_A.x0() / 16f, uvv0).next();
-        builder.fraction(f1).vertex(vert11A).uv(SIDE_A.x0() / 16f, uvv1).next();
-        builder.fraction(f1).vertex(vert10B).uv(SIDE_A.x1() / 16f, uvv1).next();
-
-        builder.fraction(f0).vertex(vert01A).uv(SIDE_B.x0() / 16f, uvv0).next();
-        builder.fraction(f0).vertex(vert01B).uv(SIDE_B.x1() / 16f, uvv0).next();
-        builder.fraction(f1).vertex(vert11B).uv(SIDE_B.x1() / 16f, uvv1).next();
-        builder.fraction(f1).vertex(vert11A).uv(SIDE_B.x0() / 16f, uvv1).next();
+        addQuad(builder, f0, f1, a0, a1, uvv0, uvv1, vert00A, vert01B, vert11B, vert10A, outBMinusA);
+        addQuad(builder, f0, f1, b0, b1, uvv0, uvv1, vert00A, vert00B, vert10B, vert10A, outNegSum);
+        addQuad(builder, f0, f1, a1, a0, uvv0, uvv1, vert00B, vert01A, vert11A, vert10B, outAMinusB);
+        addQuad(builder, f0, f1, b0, b1, uvv0, uvv1, vert01A, vert01B, vert11B, vert11A, outSum);
     }
 }

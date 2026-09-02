@@ -1,3 +1,3 @@
-### Added
+### Fixed
 
-- Added Windswept ice chains model (@Chloe).
+- Lighting and model adjustments for chains, leads, and knots.

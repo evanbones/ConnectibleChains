@@ -171,7 +171,10 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         Vec3 endPos = chainData.endPos;
         Item sourceItem = chainData.sourceItem;
 
-        RenderType entityCutout = RenderType.entityCutoutNoCull(getChainTexture(sourceItem));
+        CatenaryRenderer renderer = getCatenaryRenderer(sourceItem);
+        RenderType entityCutout = renderer.isShaded()
+                ? RenderType.entityCutoutNoCull(getChainTexture(sourceItem))
+                : RenderType.entityCutout(getChainTexture(sourceItem));
         VertexConsumer vertexConsumer = vertexConsumerProvider.getBuffer(entityCutout);
         if (CommonClass.runtimeConfig.doDebugDraw()) {
             vertexConsumer = vertexConsumerProvider.getBuffer(RenderType.lines());
@@ -183,8 +186,6 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
         Vector3f chainVec = new Vector3f((float) (endPos.x - startPos.x), (float) (endPos.y - startPos.y), (float) (endPos.z - startPos.z));
         float angleY = -(float) Math.atan2(chainVec.z(), chainVec.x());
         matrices.mulPose(new Quaternionf().rotateXYZ(0, angleY, 0));
-
-        CatenaryRenderer renderer = getCatenaryRenderer(sourceItem);
 
         if (chainData.useBaked) {
             chainRenderer.renderBaked(renderer, vertexConsumer, matrices, chainVec, chainData.slack, chainData.chainedEntityBlockLight, chainData.chainHolderBlockLight, chainData.chainedEntitySkyLight, chainData.chainHolderSkyLight, chainData.tintColor);
@@ -433,7 +434,7 @@ public class ChainKnotEntityRenderer extends EntityRenderer<ChainKnotEntity> {
 
     private int computeChainTintColor(Level level, Item sourceItem, Vec3 srcPos, Vec3 dstPos) {
         String tint = getTextureManager().getTint(sourceItem);
-        if (tint == null) return 0xFFCCCCCC;
+        if (tint == null) return 0xFFFFFFFF;
         return 0xFF000000 | sampleBiomeColor(level, tint, BlockPos.containing(srcPos.lerp(dstPos, 0.5)));
     }
 
